@@ -128,7 +128,7 @@ export interface AppState {
 
 export type ServerEvent =
   | { type: 'state'; payload: { setlist: Setlist; playback: PlaybackState; settings: AppSettings } }
-  | { type: 'playback.tick'; payload: { currentTime: number; isPlaying: boolean; songProgress: number; sectionProgress: number; remainingTimeInSong: number } }
+  | { type: 'playback.tick'; payload: { currentTime: number; isPlaying: boolean; tempo: number; songProgress: number; sectionProgress: number; remainingTimeInSong: number } }
   | { type: 'playback.songChanged'; payload: { songId: string; previousSongId?: string } }
   | { type: 'playback.sectionChanged'; payload: { sectionId: string; previousSectionId?: string } }
   | { type: 'playback.queued'; payload: { songId?: string; sectionId?: string } }

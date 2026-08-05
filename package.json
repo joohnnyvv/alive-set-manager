@@ -30,6 +30,8 @@
     "@types/node": "^26.1.2",
     "@types/ws": "^8.18.1",
     "concurrently": "^10.0.4",
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3",
     "tsx": "^4.23.8",
     "typescript": "^7.0.2",
     "vite": "^8.2.0"

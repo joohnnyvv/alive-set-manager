@@ -1,8 +1,15 @@
 import { PlaybackState } from '../types.js';
 import { logUi } from '../utils/logger.js';
 
+/**
+ * Renders transport controls.
+ *
+ * `getPlayback` is a LIVE getter that returns the current PlaybackState
+ * at the moment it's called. This prevents stale closure bugs where
+ * the Play/Pause button reads an outdated `isPlaying` value.
+ */
 export function renderTransportControls(
-  playback: PlaybackState,
+  getPlayback: () => PlaybackState,
   onPlay: () => void,
   onPause: () => void,
   onStop: () => void,
@@ -23,13 +30,15 @@ export function renderTransportControls(
     onPrev();
   };
 
-  // Play / Pause Button
+  // Play / Pause Button — reads LIVE state on each click
   const playBtn = document.createElement('button');
-  playBtn.className = `btn-transport btn-play ${playback.isPlaying ? 'is-playing' : ''}`;
-  playBtn.innerHTML = playback.isPlaying ? '⏸' : '▶';
-  playBtn.title = playback.isPlaying ? 'Pause' : 'Play';
+  const pb = getPlayback();
+  playBtn.className = `btn-transport btn-play ${pb.isPlaying ? 'is-playing' : ''}`;
+  playBtn.innerHTML = pb.isPlaying ? '⏸' : '▶';
+  playBtn.title = pb.isPlaying ? 'Pause' : 'Play';
   playBtn.onclick = () => {
-    if (playback.isPlaying) {
+    const live = getPlayback();
+    if (live.isPlaying) {
       logUi('Clicked Pause button');
       onPause();
     } else {
@@ -62,29 +71,13 @@ export function renderTransportControls(
   const goBtn = document.createElement('button');
   goBtn.className = 'btn-transport btn-go';
 
-  let goText = 'GO';
-  let goIcon = '▶';
-
-  if (playback.isPlaying && (playback.queuedSongId || playback.queuedSectionId)) {
-    goText = 'JUMP NOW';
-    goIcon = '⚡';
-    goBtn.classList.add('is-queued');
-  } else if (playback.isPlaying && playback.isLooping) {
-    goText = 'ESCAPE LOOP';
-    goIcon = '🔁';
-    goBtn.classList.add('is-looping');
-  } else if (!playback.isPlaying && playback.remainingTimeInSong <= 1) {
-    goText = 'NEXT SONG';
-    goIcon = '⏭';
-  } else if (!playback.isPlaying) {
-    goText = 'PLAY';
-    goIcon = '▶';
-  }
-
-  goBtn.innerHTML = `<span class="go-icon">${goIcon}</span><span class="go-label">${goText}</span>`;
-  goBtn.title = `Smart Action (${goText})`;
+  const goState = computeGoState(pb);
+  goBtn.innerHTML = `<span class="go-icon">${goState.icon}</span><span class="go-label">${goState.text}</span>`;
+  goBtn.title = `Smart Action (${goState.text})`;
   goBtn.onclick = () => {
-    logUi(`Clicked GO button (State: ${goText})`);
+    const live = getPlayback();
+    const gs = computeGoState(live);
+    logUi(`Clicked GO button (State: ${gs.text})`);
     onGo();
   };
 
@@ -95,4 +88,18 @@ export function renderTransportControls(
   container.appendChild(goBtn);
 
   return container;
+}
+
+export function computeGoState(playback: PlaybackState): { text: string; icon: string } {
+  if (playback.isPlaying && (playback.queuedSongId || playback.queuedSectionId)) {
+    return { text: 'JUMP NOW', icon: '⚡' };
+  } else if (playback.isPlaying && playback.isLooping) {
+    return { text: 'ESCAPE LOOP', icon: '🔁' };
+  } else if (playback.isPlaying) {
+    return { text: 'NEXT', icon: '⏭' };
+  } else if (!playback.isPlaying && playback.remainingTimeInSong <= 1) {
+    return { text: 'NEXT SONG', icon: '⏭' };
+  } else {
+    return { text: 'PLAY', icon: '▶' };
+  }
 }

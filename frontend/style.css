@@ -537,35 +537,55 @@ body {
   border-left: 6px solid var(--section-color, var(--accent));
   border-radius: var(--radius-md);
   padding: 20px;
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 10px;
   cursor: pointer;
   text-align: left;
   min-height: 90px;
-  transition: transform 0.1s ease;
+  transition: transform 0.1s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.btn-section-tile:active { transform: scale(0.96); }
+.btn-section-tile:active, .btn-section-tile.is-tapped {
+  transform: scale(0.95);
+  filter: brightness(1.2);
+}
 
 .btn-section-tile.is-active {
-  background: var(--accent);
-  color: #000;
+  background: #192b23;
+  border-color: var(--color-active);
+  color: var(--text-primary);
+  box-shadow: 0 0 16px rgba(0, 230, 118, 0.2);
 }
 
 .btn-section-tile.is-queued {
-  background: var(--color-queued);
-  color: #000;
+  border-color: var(--color-queued);
+  animation: pulse-queued 1.5s infinite;
 }
 
 .section-tile-name {
   font-size: 1.2rem;
   font-weight: 800;
+  z-index: 2;
 }
 
 .section-tile-duration {
   font-size: 0.9rem;
   opacity: 0.8;
   font-family: monospace;
+  z-index: 2;
+}
+
+.section-tile-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 6px;
+  width: 0%;
+  background: var(--accent);
+  transition: width 0.1s linear;
+  z-index: 1;
 }
 
 /* Settings View */

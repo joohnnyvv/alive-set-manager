@@ -130,9 +130,8 @@ export class JumpEngine {
   }
 
   public async executeSongJump(song: Song): Promise<void> {
-    console.log(`[JumpEngine] Executing song jump to "${song.name}"`);
-    const targetCueId = song.sections.length > 0 ? song.sections[0].id : song.id;
-    await this.abletonBridge.jumpToCue(targetCueId);
+    console.log(`[JumpEngine] Executing song jump to "${song.name}" (cue id: ${song.id})`);
+    await this.abletonBridge.jumpToCue(song.id);
 
     if (!this.abletonBridge.isPlaying()) {
       await this.abletonBridge.safePlay();

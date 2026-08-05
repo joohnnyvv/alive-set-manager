@@ -194,6 +194,7 @@ async function main() {
         payload: {
           currentTime: state.currentTime,
           isPlaying: state.isPlaying,
+          tempo: state.tempo,
           songProgress: state.songProgress,
           sectionProgress: state.sectionProgress,
           remainingTimeInSong: state.remainingTimeInSong,

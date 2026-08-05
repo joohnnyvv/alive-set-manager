@@ -1,6 +1,7 @@
 import { Section } from '../types.js';
 import { formatDuration } from '../utils/formatTime.js';
 import { getCssColor } from '../utils/colors.js';
+import { logUi } from '../utils/logger.js';
 
 export function renderSectionItem(
   section: Section,
@@ -10,6 +11,7 @@ export function renderSectionItem(
 ): HTMLElement {
   const btn = document.createElement('button');
   btn.className = `btn-section-tile ${isActive ? 'is-active' : ''} ${isQueued ? 'is-queued' : ''} ${section.flags.skip ? 'is-skipped' : ''} ${section.flags.quickJump ? 'is-quick-jump' : ''}`;
+  btn.dataset.id = section.id;
 
   const colorHex = getCssColor(section.color);
   btn.style.setProperty('--section-color', colorHex);
@@ -22,10 +24,23 @@ export function renderSectionItem(
   duration.className = 'section-tile-duration';
   duration.textContent = formatDuration(section.duration);
 
+  // Section progress bar overlay inside tile
+  const progressFill = document.createElement('div');
+  progressFill.className = 'section-tile-progress';
+
   btn.appendChild(title);
   btn.appendChild(duration);
+  btn.appendChild(progressFill);
 
-  btn.onclick = () => onClick(section);
+  btn.onclick = () => {
+    logUi(`Clicked section tile: "${section.name}" (id: ${section.id})`);
+    if (navigator.vibrate) {
+      navigator.vibrate(25);
+    }
+    btn.classList.add('is-tapped');
+    setTimeout(() => btn.classList.remove('is-tapped'), 200);
+    onClick(section);
+  };
 
   return btn;
 }

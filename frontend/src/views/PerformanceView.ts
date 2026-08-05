@@ -15,15 +15,16 @@ export function renderPerformanceView(store: Store): HTMLElement {
 
   const activeSong = setlist.songs.find(s => s.id === playback.activeSongId);
 
-  // Find next song
+  // Find next non-skipped song
+  const activeSongs = setlist.songs.filter(s => !s.isSkipped);
   let nextSong: any = undefined;
   if (activeSong) {
-    const idx = setlist.songs.findIndex(s => s.id === activeSong.id);
-    if (idx !== -1 && idx + 1 < setlist.songs.length) {
-      nextSong = setlist.songs[idx + 1];
+    const idx = activeSongs.findIndex(s => s.id === activeSong.id);
+    if (idx !== -1 && idx + 1 < activeSongs.length) {
+      nextSong = activeSongs[idx + 1];
     }
-  } else if (setlist.songs.length > 0) {
-    nextSong = setlist.songs[0];
+  } else if (activeSongs.length > 0) {
+    nextSong = activeSongs[0];
   }
 
   // Top info bar: Clock & Status
@@ -102,9 +103,9 @@ export function renderPerformanceView(store: Store): HTMLElement {
   `;
   view.appendChild(nextSongCard);
 
-  // Transport Controls
+  // Transport Controls — pass a getter so clicks always read LIVE state
   const transport = renderTransportControls(
-    playback,
+    () => store.getState().playback,
     () => store.dispatch({ type: 'play' }),
     () => store.dispatch({ type: 'pause' }),
     () => store.dispatch({ type: 'stop' }),

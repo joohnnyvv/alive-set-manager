@@ -96,6 +96,7 @@ export class Store {
       case 'playback.tick':
         this.state.playback.currentTime = msg.payload.currentTime;
         this.state.playback.isPlaying = msg.payload.isPlaying;
+        this.state.playback.tempo = msg.payload.tempo;
         this.state.playback.songProgress = msg.payload.songProgress;
         this.state.playback.sectionProgress = msg.payload.sectionProgress;
         this.state.playback.remainingTimeInSong = msg.payload.remainingTimeInSong;
