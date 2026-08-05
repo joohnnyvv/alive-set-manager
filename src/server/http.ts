@@ -1,0 +1,106 @@
+import express, { Request, Response } from 'express';
+import cors from 'cors';
+import path from 'path';
+import { SetlistEngine } from '../engine/setlist.js';
+import { AbletonBridge } from '../ableton/bridge.js';
+import { SettingsStorage } from '../storage/settings.js';
+import { SetlistStorage } from '../storage/setlist.js';
+import { PlaybackState } from '../types/index.js';
+
+export function createHttpServer(
+  setlistEngine: SetlistEngine,
+  abletonBridge: AbletonBridge,
+  settingsStorage: SettingsStorage,
+  setlistStorage: SetlistStorage,
+  getPlaybackState: () => PlaybackState
+) {
+  const app = express();
+
+  app.use(cors());
+  app.use(express.json());
+
+  // Static files for production build
+  const staticPath = path.join(process.cwd(), 'dist', 'frontend');
+  app.use(express.static(staticPath));
+
+  // REST API Endpoints
+  app.get('/api/state', (req: Request, res: Response) => {
+    const tempo = abletonBridge.getTempo();
+    const currentTime = abletonBridge.getCurrentSongTime();
+    const isPlaying = abletonBridge.isPlaying();
+    const setlist = setlistEngine.getSetlistState(tempo, currentTime, isPlaying);
+    const playback = getPlaybackState();
+    const settings = settingsStorage.getSettings();
+
+    res.json({
+      setlist,
+      playback,
+      settings,
+      midi: {
+        inputs: [],
+        outputs: [],
+        mappings: [],
+        learning: false,
+      },
+    });
+  });
+
+  app.get('/api/setlist', (req: Request, res: Response) => {
+    const setlist = setlistEngine.getSetlistState(
+      abletonBridge.getTempo(),
+      abletonBridge.getCurrentSongTime(),
+      abletonBridge.isPlaying()
+    );
+    res.json(setlist);
+  });
+
+  app.post('/api/setlist/save', async (req: Request, res: Response) => {
+    const { name } = req.body;
+    if (!name) {
+      res.status(400).json({ error: 'Name is required' });
+      return;
+    }
+    const setlist = setlistEngine.getSetlistState();
+    await setlistStorage.save(name, setlist.order);
+    res.json({ success: true, name });
+  });
+
+  app.post('/api/setlist/load', async (req: Request, res: Response) => {
+    const { name } = req.body;
+    if (!name) {
+      res.status(400).json({ error: 'Name is required' });
+      return;
+    }
+    const loaded = await setlistStorage.load(name);
+    if (!loaded) {
+      res.status(444).json({ error: 'Setlist not found' });
+      return;
+    }
+    setlistEngine.reorder(loaded.order);
+    res.json({ success: true, loaded });
+  });
+
+  app.get('/api/setlist/files', async (req: Request, res: Response) => {
+    const files = await setlistStorage.listFiles();
+    res.json(files);
+  });
+
+  app.get('/api/songs', (req: Request, res: Response) => {
+    const setlist = setlistEngine.getSetlistState();
+    res.json(setlist.songs);
+  });
+
+  app.get('/api/settings', (req: Request, res: Response) => {
+    res.json(settingsStorage.getSettings());
+  });
+
+  app.post('/api/settings', async (req: Request, res: Response) => {
+    const newSettings = req.body;
+    for (const [key, val] of Object.entries(newSettings)) {
+      await settingsStorage.updateSetting(key as any, val);
+    }
+    res.json(settingsStorage.getSettings());
+  });
+
+  return app;
+}
