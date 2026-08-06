@@ -187,32 +187,75 @@ export function renderSettingsView(store: Store): HTMLElement {
   mappingsList.style.marginTop = '10px';
 
   if (!state.midi.mappings || state.midi.mappings.length === 0) {
-    mappingsList.innerHTML = '<div style="color:var(--text-muted); font-size:0.9rem;">No MIDI mappings configured.</div>';
+    mappingsList.innerHTML = '<div style="color:var(--text-muted); font-size:0.9rem;">No MIDI mappings configured. Click "Add Mapping" above to create one.</div>';
   } else {
     state.midi.mappings.forEach((mapping) => {
       const row = document.createElement('div');
       row.className = 'search-result-item';
-      const isLearningThis = state.midi.learning && state.midi.learningMappingId === mapping.id;
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.justifyContent = 'space-between';
+      row.style.gap = '12px';
+      row.style.padding = '10px 14px';
 
+      const isLearningThis = state.midi.learning && state.midi.learningMappingId === mapping.id;
       const actionText = getMidiActionLabel(mapping.action);
-      const msgInfo = mapping.inputName ? `${mapping.inputName} (${mapping.messageType} Ch:${mapping.channel})` : 'Unassigned (click Learn)';
+
+      const noteDetail = mapping.note !== undefined ? `Note ${mapping.note}` : mapping.cc !== undefined ? `CC #${mapping.cc}` : '';
+      const midiDetails = mapping.messageType
+        ? `${mapping.messageType.toUpperCase()} | Ch:${mapping.channel}${noteDetail ? ' | ' + noteDetail : ''}`
+        : 'Not learned yet';
+
+      // Build device options
+      const deviceOptions = [
+        `<option value="Any Device" ${!mapping.inputName || mapping.inputName === 'Any Device' ? 'selected' : ''}>🌐 Any Device</option>`
+      ];
+
+      const activeInputs = state.midi.inputs || [];
+      activeInputs.forEach(dev => {
+        const isSel = mapping.inputName === dev ? 'selected' : '';
+        deviceOptions.push(`<option value="${dev}" ${isSel}>🔒 ${dev}</option>`);
+      });
+
+      if (mapping.inputName && mapping.inputName !== 'Any Device' && !activeInputs.includes(mapping.inputName)) {
+        deviceOptions.push(`<option value="${mapping.inputName}" selected>⚠️ ${mapping.inputName} (Offline)</option>`);
+      }
 
       row.innerHTML = `
-        <div>
-          <strong>${actionText}</strong>
-          <div style="font-size:0.8rem; color:var(--text-secondary);">${msgInfo}</div>
+        <div style="flex:1; min-width:0;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+            <strong style="color:var(--text-primary); font-size:0.95rem;">${actionText}</strong>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-secondary); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <select class="select-input select-midi-device" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; max-width:200px;">
+              ${deviceOptions.join('')}
+            </select>
+            <span style="background:var(--bg-tertiary, #2a2a2a); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:0.75rem;">
+              ${midiDetails}
+            </span>
+          </div>
         </div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-sm ${isLearningThis ? 'btn-primary' : 'btn-secondary'} btn-learn-midi">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn btn-sm ${isLearningThis ? 'btn-primary pulse-anim' : 'btn-secondary'} btn-learn-midi">
             ${isLearningThis ? '⏳ Listening...' : 'Learn'}
           </button>
-          <button class="btn-icon btn-remove btn-del-midi">✕</button>
+          <button class="btn-icon btn-remove btn-del-midi" title="Remove Mapping">✕</button>
         </div>
       `;
 
+      const deviceSelect = row.querySelector('.select-midi-device') as HTMLSelectElement;
+      deviceSelect.onchange = () => {
+        const updatedDev = deviceSelect.value;
+        store.dispatch({
+          type: 'midi.update-mapping',
+          mapping: { ...mapping, inputName: updatedDev },
+        });
+        showToast(`Locked "${actionText}" to ${updatedDev === 'Any Device' ? 'Any Device' : updatedDev}`, 'success');
+      };
+
       row.querySelector('.btn-learn-midi')!.addEventListener('click', () => {
         store.dispatch({ type: 'midi.learn', mappingId: mapping.id });
-        showToast('Press any button/pedal on your MIDI controller...', 'info');
+        showToast(`Press any button/pedal for "${actionText}"...`, 'info');
       });
 
       row.querySelector('.btn-del-midi')!.addEventListener('click', () => {

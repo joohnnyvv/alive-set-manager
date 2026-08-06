@@ -48,6 +48,7 @@ function initApp() {
   let activeViewEl: HTMLElement | null = null;
   let activeSetlistKey: string = '';
   let activeQueueKey: string = '';
+  let activeMidiKey: string = '';
   let lastActiveSongId: string | undefined = undefined;
 
   store.subscribe((state) => {
@@ -68,22 +69,27 @@ function initApp() {
     // Track setlist structure key (song count + order + skipped statuses)
     const currentSetlistKey = `${state.setlist.songs.length}_${state.setlist.order.join(',')}_${state.setlist.songs.map(s => s.id + (s.isSkipped ? ':skip' : '')).join('|')}`;
     const currentQueueKey = `${state.playback.queuedSongId || ''}_${state.playback.queuedSectionId || ''}`;
+    const currentMidiKey = `${state.midi.learning ? state.midi.learningMappingId : 'idle'}_${state.midi.mappings.length}_${state.midi.mappings.map(m => m.id + ':' + m.inputName + ':' + m.messageType + ':' + m.channel + ':' + (m.note ?? '') + ':' + (m.cc ?? '')).join('|')}`;
+
     const activeSongChanged = state.playback.activeSongId !== lastActiveSongId;
     const queueChanged = currentQueueKey !== activeQueueKey;
+    const midiChanged = currentMidiKey !== activeMidiKey;
 
     lastActiveSongId = state.playback.activeSongId;
 
-    // ⭐ Rebuild DOM if view changed, DOM missing, setlist structure/skipped state changed, active song changed, or queued target changed
+    // ⭐ Rebuild DOM if view changed, DOM missing, setlist structure/skipped state changed, active song changed, queued target changed, or MIDI settings changed
     if (
       state.currentView !== activeViewName ||
       !activeViewEl ||
       currentSetlistKey !== activeSetlistKey ||
       activeSongChanged ||
-      queueChanged
+      queueChanged ||
+      midiChanged
     ) {
       activeViewName = state.currentView;
       activeSetlistKey = currentSetlistKey;
       activeQueueKey = currentQueueKey;
+      activeMidiKey = currentMidiKey;
       contentArea.innerHTML = '';
 
       switch (state.currentView) {

@@ -59,78 +59,19 @@ async function main() {
     }
   );
 
-  // 3. MIDI Action Handler (including GO button logic)
+  // 3. MIDI Action Handler
   const handleMidiAction = async (action: MidiAction) => {
     console.log('[MIDI Action]', action);
-    switch (action.type) {
-      case 'play':
-        await abletonBridge.safePlay();
-        break;
-      case 'pause':
-        await abletonBridge.pause();
-        break;
-      case 'stop':
-        await abletonBridge.safeStop();
-        break;
-      case 'cancel-queue':
-        jumpEngine.cancelQueue();
-        break;
-      case 'toggle-loop':
-        const isLoop = (playbackTracker.getPlaybackState() as any).isLooping;
-        await abletonBridge.setLoop(!isLoop);
-        break;
-      case 'go':
-        await handleGoButton();
-        break;
-      case 'next-song':
-        const setlistNext = setlistEngine.getSetlistState();
-        if (setlistNext.activeSongId) {
-          const idx = setlistNext.songs.findIndex(s => s.id === setlistNext.activeSongId);
-          if (idx !== -1 && idx + 1 < setlistNext.songs.length) {
-            await jumpEngine.requestSongJump(setlistNext.songs[idx + 1].id);
-          }
-        }
-        break;
-      case 'prev-song':
-        const setlistPrev = setlistEngine.getSetlistState();
-        if (setlistPrev.activeSongId) {
-          const idx = setlistPrev.songs.findIndex(s => s.id === setlistPrev.activeSongId);
-          if (idx > 0) {
-            await jumpEngine.requestSongJump(setlistPrev.songs[idx - 1].id);
-          }
-        }
-        break;
-    }
-  };
-
-  const handleGoButton = async () => {
-    const state = playbackTracker.getPlaybackState();
-    const queued = jumpEngine.getQueuedTarget();
-
-    if (state.isPlaying && queued) {
-      // 1. Playing with queued jump -> execute immediately
-      await jumpEngine.executeQueuedNow();
-    } else if (state.isPlaying && state.isLooping) {
-      // 2. Playing in loop -> escape loop
-      await abletonBridge.setLoop(false);
-    } else if (!state.isPlaying && state.remainingTimeInSong <= 1) {
-      // 3. Stopped at song end -> next song
-      const setlist = setlistEngine.getSetlistState();
-      if (setlist.activeSongId) {
-        const idx = setlist.songs.findIndex(s => s.id === setlist.activeSongId);
-        if (idx !== -1 && idx + 1 < setlist.songs.length) {
-          await jumpEngine.requestSongJump(setlist.songs[idx + 1].id);
-        }
-      }
-    } else if (!state.isPlaying) {
-      // 4. Stopped inside song -> start playback
-      await abletonBridge.safePlay();
+    if (wsServer) {
+      await wsServer.handleMidiAction(action);
     }
   };
 
   const midiEngine = new MidiEngine(handleMidiAction, (mappingId, mapping) => {
     if (wsServer) {
-      wsServer.broadcast({ type: 'midi.learned', payload: { mappingId, mapping } });
+      const allMappings = midiEngine.getMappings();
+      wsServer.broadcast({ type: 'midi.learned', payload: { mappingId, mapping, mappings: allMappings } });
+      wsServer.broadcast({ type: 'midi.mappings', payload: allMappings });
     }
   });
 

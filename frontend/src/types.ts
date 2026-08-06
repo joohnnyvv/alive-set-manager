@@ -131,7 +131,7 @@ export interface AppState {
 }
 
 export type ServerEvent =
-  | { type: 'state'; payload: { setlist: Setlist; playback: PlaybackState; settings: AppSettings } }
+  | { type: 'state'; payload: { setlist: Setlist; playback: PlaybackState; settings: AppSettings; midi?: { inputs: string[]; outputs: string[]; mappings: MidiMapping[] } } }
   | { type: 'playback.tick'; payload: { currentTime: number; isPlaying: boolean; tempo: number; songProgress: number; sectionProgress: number; remainingTimeInSong: number } }
   | { type: 'playback.songChanged'; payload: { songId: string; previousSongId?: string } }
   | { type: 'playback.sectionChanged'; payload: { sectionId: string; previousSectionId?: string } }
@@ -140,8 +140,9 @@ export type ServerEvent =
   | { type: 'setlist.updated'; payload: Setlist }
   | { type: 'setlist.saved'; payload: { name: string } }
   | { type: 'midi.devices'; payload: { inputs: string[]; outputs: string[] } }
+  | { type: 'midi.mappings'; payload: MidiMapping[] }
   | { type: 'midi.learning'; payload: { mappingId: string } }
-  | { type: 'midi.learned'; payload: { mappingId: string; mapping: MidiMapping } }
+  | { type: 'midi.learned'; payload: { mappingId: string; mapping: MidiMapping; mappings?: MidiMapping[] } }
   | { type: 'error'; payload: { message: string; code: string } };
 
 export type ClientAction =
@@ -151,6 +152,8 @@ export type ClientAction =
   | { type: 'go' }
   | { type: 'next-song' }
   | { type: 'prev-song' }
+  | { type: 'next-section' }
+  | { type: 'prev-section' }
   | { type: 'jump-to-song'; songId: string }
   | { type: 'jump-to-section'; sectionId: string }
   | { type: 'queue-song'; songId: string }
@@ -166,4 +169,5 @@ export type ClientAction =
   | { type: 'settings.set'; key: string; value: any }
   | { type: 'midi.learn'; mappingId: string }
   | { type: 'midi.add-mapping'; mapping: MidiMapping }
-  | { type: 'midi.remove-mapping'; mappingId: string };
+  | { type: 'midi.remove-mapping'; mappingId: string }
+  | { type: 'midi.update-mapping'; mapping: MidiMapping };

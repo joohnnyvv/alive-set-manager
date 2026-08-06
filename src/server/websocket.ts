@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
-import { ServerEvent, ClientAction, PlaybackState } from '../types/index.js';
+import { ServerEvent, ClientAction, PlaybackState, MidiAction } from '../types/index.js';
 import { SetlistEngine } from '../engine/setlist.js';
 import { AbletonBridge } from '../ableton/bridge.js';
 import { SettingsStorage } from '../storage/settings.js';
@@ -46,6 +46,11 @@ export class WsServer {
           ),
           playback: this.getPlaybackState(),
           settings: this.settingsStorage.getSettings(),
+          midi: {
+            inputs: devices.inputs,
+            outputs: devices.outputs,
+            mappings: this.midiEngine ? this.midiEngine.getMappings() : [],
+          },
         },
       });
 
@@ -53,6 +58,13 @@ export class WsServer {
         type: 'midi.devices',
         payload: devices,
       });
+
+      if (this.midiEngine) {
+        this.sendToClient(ws, {
+          type: 'midi.mappings',
+          payload: this.midiEngine.getMappings(),
+        });
+      }
 
       ws.on('message', async (data: string) => {
         try {
@@ -108,6 +120,16 @@ export class WsServer {
 
       case 'prev-song':
         await this.handlePrevSong();
+        this.broadcastFullState();
+        break;
+
+      case 'next-section':
+        await this.handleNextSection();
+        this.broadcastFullState();
+        break;
+
+      case 'prev-section':
+        await this.handlePrevSection();
         this.broadcastFullState();
         break;
 
@@ -197,12 +219,21 @@ export class WsServer {
       case 'midi.add-mapping':
         if (this.midiEngine) {
           this.midiEngine.addMapping(action.mapping);
+          this.broadcast({ type: 'midi.mappings', payload: this.midiEngine.getMappings() });
         }
         break;
 
       case 'midi.remove-mapping':
         if (this.midiEngine) {
           this.midiEngine.removeMapping(action.mappingId);
+          this.broadcast({ type: 'midi.mappings', payload: this.midiEngine.getMappings() });
+        }
+        break;
+
+      case 'midi.update-mapping':
+        if (this.midiEngine) {
+          this.midiEngine.updateMapping(action.mapping);
+          this.broadcast({ type: 'midi.mappings', payload: this.midiEngine.getMappings() });
         }
         break;
 
@@ -218,7 +249,7 @@ export class WsServer {
     return this.setlistEngine.getSetlistState(tempo, time, isPlaying);
   }
 
-  private async handleGoButton(): Promise<void> {
+  public async handleGoButton(): Promise<void> {
     const state = this.getPlaybackState();
     const queued = this.jumpEngine.getQueuedTarget();
 
@@ -234,37 +265,49 @@ export class WsServer {
       logInfo('GO', 'Playing without queue -> Jumping to next song');
       await this.handleNextSong();
     } else if (!state.isPlaying && state.remainingTimeInSong <= 1) {
-      logInfo('GO', 'Stopped at song end -> Jumping to next song');
+      logInfo('GO', 'Stopped at song end -> Jumping to next song & playing');
       await this.handleNextSong();
+      await this.abletonBridge.safePlay();
     } else {
       logInfo('GO', 'Stopped inside song -> Starting playback');
       await this.abletonBridge.safePlay();
     }
   }
 
-  private async handleNextSong(): Promise<void> {
+  public async handleNextSong(): Promise<void> {
     const setlist = this.getSetlistCurrentState();
     const activeSongs = setlist.songs.filter(s => !s.isSkipped);
-    const currentTime = this.abletonBridge.getCurrentSongTime();
+    if (activeSongs.length === 0) return;
 
+    const currentTime = this.abletonBridge.getCurrentSongTime();
     let currentIdx = activeSongs.findIndex(s => s.id === setlist.activeSongId);
 
-    if (currentIdx === -1 && activeSongs.length > 0) {
+    if (currentIdx === -1) {
       for (let i = 0; i < activeSongs.length; i++) {
-        if (currentTime < activeSongs[i].endTime) {
-          currentIdx = i - 1;
+        if (currentTime >= activeSongs[i].startTime - 0.01 && currentTime < activeSongs[i].endTime - 0.01) {
+          currentIdx = i;
           break;
         }
       }
-      if (currentIdx === -1 && currentTime >= activeSongs[activeSongs.length - 1].endTime) {
-        currentIdx = activeSongs.length - 1;
+    }
+
+    if (currentIdx === -1) {
+      let bestIdx = -1;
+      let maxStart = -Infinity;
+      for (let i = 0; i < activeSongs.length; i++) {
+        if (activeSongs[i].startTime <= currentTime + 0.01 && activeSongs[i].startTime > maxStart) {
+          maxStart = activeSongs[i].startTime;
+          bestIdx = i;
+        }
       }
+      currentIdx = bestIdx;
     }
 
     if (currentIdx !== -1 && currentIdx + 1 < activeSongs.length) {
-      logInfo('NextSong', `Jumping to next song: "${activeSongs[currentIdx + 1].name}" (id: ${activeSongs[currentIdx + 1].id})`);
-      await this.jumpEngine.requestSongJump(activeSongs[currentIdx + 1].id);
-    } else if (currentIdx === -1 && activeSongs.length > 0) {
+      const nextSong = activeSongs[currentIdx + 1];
+      logInfo('NextSong', `Jumping to next song: "${nextSong.name}" (id: ${nextSong.id})`);
+      await this.jumpEngine.requestSongJump(nextSong.id);
+    } else if (currentIdx === -1) {
       logInfo('NextSong', `Jumping to first song: "${activeSongs[0].name}"`);
       await this.jumpEngine.requestSongJump(activeSongs[0].id);
     } else {
@@ -272,35 +315,201 @@ export class WsServer {
     }
   }
 
-  private async handlePrevSong(): Promise<void> {
+  public async handlePrevSong(): Promise<void> {
     const setlist = this.getSetlistCurrentState();
     const activeSongs = setlist.songs.filter(s => !s.isSkipped);
+    if (activeSongs.length === 0) return;
+
     const currentTime = this.abletonBridge.getCurrentSongTime();
+    const isPlaying = this.abletonBridge.isPlaying();
+    const settings = this.settingsStorage.getSettings();
 
     let currentIdx = activeSongs.findIndex(s => s.id === setlist.activeSongId);
 
-    if (currentIdx === -1 && activeSongs.length > 0) {
+    if (currentIdx === -1) {
       for (let i = 0; i < activeSongs.length; i++) {
-        if (currentTime <= activeSongs[i].endTime) {
+        if (currentTime >= activeSongs[i].startTime - 0.01 && currentTime < activeSongs[i].endTime - 0.01) {
           currentIdx = i;
           break;
         }
       }
     }
 
-    if (currentIdx > 0) {
-      logInfo('PrevSong', `Jumping to previous song: "${activeSongs[currentIdx - 1].name}" (id: ${activeSongs[currentIdx - 1].id})`);
-      await this.jumpEngine.requestSongJump(activeSongs[currentIdx - 1].id);
-    } else if (currentIdx === 0) {
-      logInfo('PrevSong', `Already at first song -> Restarting "${activeSongs[0].name}"`);
-      await this.jumpEngine.requestSongJump(activeSongs[0].id);
-    } else if (activeSongs.length > 0) {
+    if (currentIdx === -1) {
+      let bestIdx = -1;
+      let maxStart = -Infinity;
+      for (let i = 0; i < activeSongs.length; i++) {
+        if (activeSongs[i].startTime <= currentTime + 0.01 && activeSongs[i].startTime > maxStart) {
+          maxStart = activeSongs[i].startTime;
+          bestIdx = i;
+        }
+      }
+      currentIdx = bestIdx;
+    }
+
+    if (currentIdx !== -1) {
+      const currentSong = activeSongs[currentIdx];
+      const elapsedInSong = Math.max(0, currentTime - currentSong.startTime);
+      const tempo = setlist.tempo || 120;
+      const elapsedSeconds = (elapsedInSong / tempo) * 60;
+
+      if ((isPlaying && elapsedSeconds > 3) || (settings.restartSongBeforeJumpingBack && elapsedSeconds > 1)) {
+        logInfo('PrevSong', `Restarting current song "${currentSong.name}"`);
+        await this.jumpEngine.requestSongJump(currentSong.id);
+      } else if (currentIdx > 0) {
+        const prevSong = activeSongs[currentIdx - 1];
+        logInfo('PrevSong', `Jumping to previous song: "${prevSong.name}" (id: ${prevSong.id})`);
+        await this.jumpEngine.requestSongJump(prevSong.id);
+      } else {
+        logInfo('PrevSong', `Already at first song -> Restarting "${currentSong.name}"`);
+        await this.jumpEngine.requestSongJump(currentSong.id);
+      }
+    } else {
       logInfo('PrevSong', `Jumping to first song: "${activeSongs[0].name}"`);
       await this.jumpEngine.requestSongJump(activeSongs[0].id);
     }
   }
 
+  public async handleNextSection(): Promise<void> {
+    const currentTime = this.abletonBridge.getCurrentSongTime();
+    const active = this.setlistEngine.getActiveSongAndSection(currentTime);
+    if (!active.song || active.song.sections.length === 0) return;
+
+    const sections = active.song.sections.filter(sec => !sec.flags.skip);
+    if (sections.length === 0) return;
+
+    let curIdx = sections.findIndex(sec => sec.id === active.section?.id);
+
+    if (curIdx === -1) {
+      for (let i = 0; i < sections.length; i++) {
+        if (currentTime >= sections[i].startTime - 0.01 && currentTime < sections[i].endTime - 0.01) {
+          curIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (curIdx !== -1 && curIdx + 1 < sections.length) {
+      logInfo('NextSection', `Jumping to next section: "${sections[curIdx + 1].name}"`);
+      await this.jumpEngine.requestSectionJump(sections[curIdx + 1].id);
+    } else if (curIdx === -1 && sections.length > 0) {
+      logInfo('NextSection', `Jumping to first section: "${sections[0].name}"`);
+      await this.jumpEngine.requestSectionJump(sections[0].id);
+    }
+  }
+
+  public async handlePrevSection(): Promise<void> {
+    const currentTime = this.abletonBridge.getCurrentSongTime();
+    const active = this.setlistEngine.getActiveSongAndSection(currentTime);
+    if (!active.song || active.song.sections.length === 0) return;
+
+    const sections = active.song.sections.filter(sec => !sec.flags.skip);
+    if (sections.length === 0) return;
+
+    let curIdx = sections.findIndex(sec => sec.id === active.section?.id);
+
+    if (curIdx === -1) {
+      for (let i = 0; i < sections.length; i++) {
+        if (currentTime >= sections[i].startTime - 0.01 && currentTime < sections[i].endTime - 0.01) {
+          curIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (curIdx > 0) {
+      logInfo('PrevSection', `Jumping to previous section: "${sections[curIdx - 1].name}"`);
+      await this.jumpEngine.requestSectionJump(sections[curIdx - 1].id);
+    } else if (sections.length > 0) {
+      logInfo('PrevSection', `Already at first section -> Restarting "${sections[0].name}"`);
+      await this.jumpEngine.requestSectionJump(sections[0].id);
+    }
+  }
+
+  public async handleMidiAction(action: MidiAction): Promise<void> {
+    logInfo('MIDI', `Executing MIDI Action: ${action.type}`);
+    switch (action.type) {
+      case 'play':
+        await this.abletonBridge.safePlay();
+        this.broadcastFullState();
+        break;
+
+      case 'pause':
+        await this.abletonBridge.pause();
+        this.broadcastFullState();
+        break;
+
+      case 'stop':
+        await this.abletonBridge.safeStop();
+        this.broadcastFullState();
+        break;
+
+      case 'go':
+        await this.handleGoButton();
+        this.broadcastFullState();
+        break;
+
+      case 'next-song':
+        await this.handleNextSong();
+        this.broadcastFullState();
+        break;
+
+      case 'prev-song':
+        await this.handlePrevSong();
+        this.broadcastFullState();
+        break;
+
+      case 'next-section':
+        await this.handleNextSection();
+        this.broadcastFullState();
+        break;
+
+      case 'prev-section':
+        await this.handlePrevSection();
+        this.broadcastFullState();
+        break;
+
+      case 'toggle-loop':
+        const isLoop = (this.getPlaybackState() as any).isLooping;
+        await this.abletonBridge.setLoop(!isLoop);
+        this.broadcastFullState();
+        break;
+
+      case 'cancel-queue':
+        this.jumpEngine.cancelQueue();
+        this.broadcastFullState();
+        break;
+
+      case 'jump-to-song':
+        const setlist = this.getSetlistCurrentState();
+        const activeSongs = setlist.songs.filter(s => !s.isSkipped);
+        const songIdx = (action as any).songIndex;
+        if (typeof songIdx === 'number' && songIdx >= 0 && songIdx < activeSongs.length) {
+          await this.jumpEngine.requestSongJump(activeSongs[songIdx].id);
+        } else if ((action as any).songId) {
+          await this.jumpEngine.requestSongJump((action as any).songId);
+        }
+        this.broadcastFullState();
+        break;
+
+      case 'jump-to-section':
+        const active = this.setlistEngine.getActiveSongAndSection(this.abletonBridge.getCurrentSongTime());
+        const secIdx = (action as any).sectionIndex;
+        if (active.song && typeof secIdx === 'number' && secIdx >= 0 && secIdx < active.song.sections.length) {
+          await this.jumpEngine.requestSectionJump(active.song.sections[secIdx].id);
+        } else if ((action as any).sectionId) {
+          await this.jumpEngine.requestSectionJump((action as any).sectionId);
+        }
+        this.broadcastFullState();
+        break;
+
+      default:
+        console.warn('[WsServer] Unhandled MIDI action:', (action as any).type);
+    }
+  }
+
   public broadcastFullState(): void {
+    const devices = this.midiEngine ? this.midiEngine.getDevices() : { inputs: [], outputs: [] };
     this.broadcast({
       type: 'state',
       payload: {
@@ -311,6 +520,11 @@ export class WsServer {
         ),
         playback: this.getPlaybackState(),
         settings: this.settingsStorage.getSettings(),
+        midi: {
+          inputs: devices.inputs,
+          outputs: devices.outputs,
+          mappings: this.midiEngine ? this.midiEngine.getMappings() : [],
+        },
       },
     });
   }

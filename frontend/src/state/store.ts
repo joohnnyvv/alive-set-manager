@@ -1,5 +1,21 @@
 import { AppState, ServerEvent, ClientAction, AppSettings, Setlist, PlaybackState } from '../types.js';
 import { WsClient } from '../api/websocket.js';
+import { showToast } from '../components/Toast.js';
+
+function safeVibrate(pattern: number | number[]): void {
+  try {
+    if (
+      typeof navigator !== 'undefined' &&
+      'vibrate' in navigator &&
+      typeof navigator.vibrate === 'function' &&
+      (navigator as any).userActivation?.hasBeenActive
+    ) {
+      navigator.vibrate(pattern);
+    }
+  } catch {
+    // Ignore browser user-activation intervention errors
+  }
+}
 
 const savedTheme = (localStorage.getItem('app-theme') as any) || 'midnight';
 
@@ -98,6 +114,11 @@ export class Store {
         this.state.setlist = msg.payload.setlist;
         this.state.playback = msg.payload.playback;
         this.state.settings = msg.payload.settings;
+        if (msg.payload.midi) {
+          this.state.midi.inputs = msg.payload.midi.inputs || [];
+          this.state.midi.outputs = msg.payload.midi.outputs || [];
+          this.state.midi.mappings = msg.payload.midi.mappings || [];
+        }
         if (msg.payload.settings.theme) {
           this.applyTheme(msg.payload.settings.theme);
         }
@@ -120,9 +141,7 @@ export class Store {
       case 'playback.songChanged':
         this.state.playback.activeSongId = msg.payload.songId;
         this.state.setlist.activeSongId = msg.payload.songId;
-        if (navigator.vibrate) {
-          navigator.vibrate(50);
-        }
+        safeVibrate(50);
         break;
 
       case 'playback.sectionChanged':
@@ -153,6 +172,10 @@ export class Store {
         this.state.midi.outputs = msg.payload.outputs;
         break;
 
+      case 'midi.mappings':
+        this.state.midi.mappings = msg.payload;
+        break;
+
       case 'midi.learning':
         this.state.midi.learning = true;
         this.state.midi.learningMappingId = msg.payload.mappingId;
@@ -161,6 +184,19 @@ export class Store {
       case 'midi.learned':
         this.state.midi.learning = false;
         this.state.midi.learningMappingId = undefined;
+        if (msg.payload.mappings) {
+          this.state.midi.mappings = msg.payload.mappings;
+        } else if (msg.payload.mapping) {
+          const idx = this.state.midi.mappings.findIndex(m => m.id === msg.payload.mappingId);
+          if (idx !== -1) {
+            this.state.midi.mappings[idx] = msg.payload.mapping;
+          } else {
+            this.state.midi.mappings.push(msg.payload.mapping);
+          }
+        }
+        const m = msg.payload.mapping;
+        const noteDetail = m.note !== undefined ? `Note:${m.note}` : m.cc !== undefined ? `CC:${m.cc}` : '';
+        showToast(`MIDI Learned: "${m.inputName || 'Device'}" (${m.messageType.toUpperCase()} Ch:${m.channel} ${noteDetail})`, 'success');
         break;
     }
     this.notify();

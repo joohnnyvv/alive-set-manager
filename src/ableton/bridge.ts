@@ -251,6 +251,8 @@ export class AbletonBridge {
       if (targetCue) {
         console.log(`[AbletonBridge] Jumping to cue: ${targetCue.raw.name} (id: ${targetCue.raw.id})`);
         await targetCue.jump();
+        const cueTime = await targetCue.get('time');
+        this.currentSongTimeState = cueTime;
       } else {
         console.warn(`[AbletonBridge] Cue point ${cueId} not found`);
       }
@@ -278,9 +280,11 @@ export class AbletonBridge {
       } else {
         await this.setSongTime(beatTime);
       }
+      this.currentSongTimeState = beatTime;
     } catch (err) {
       console.error('[AbletonBridge] Error jumping to time:', err);
       await this.setSongTime(beatTime);
+      this.currentSongTimeState = beatTime;
     }
   }
 

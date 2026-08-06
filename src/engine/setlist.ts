@@ -183,12 +183,24 @@ export class SetlistEngine {
 
   public getActiveSongAndSection(currentTime: number): { song?: Song; section?: Section } {
     // Find song where currentTime falls into [startTime, endTime)
-    const song = this.songs.find(s => currentTime >= s.startTime - 0.01 && currentTime < s.endTime - 0.01);
+    let song = this.songs.find(s => currentTime >= s.startTime - 0.01 && currentTime < s.endTime - 0.01);
+    if (!song && this.songs.length > 0) {
+      const lastSong = [...this.songs].sort((a, b) => b.endTime - a.endTime)[0];
+      if (lastSong && currentTime >= lastSong.endTime - 0.05 && currentTime <= lastSong.endTime + 0.5) {
+        song = lastSong;
+      }
+    }
     if (!song) {
       return { song: undefined, section: undefined };
     }
 
-    const section = song.sections.find(sec => currentTime >= sec.startTime - 0.01 && currentTime < sec.endTime - 0.01);
+    let section = song.sections.find(sec => currentTime >= sec.startTime - 0.01 && currentTime < sec.endTime - 0.01);
+    if (!section && song.sections.length > 0) {
+      const lastSection = [...song.sections].sort((a, b) => b.endTime - a.endTime)[0];
+      if (lastSection && currentTime >= lastSection.endTime - 0.05 && currentTime <= lastSection.endTime + 0.5) {
+        section = lastSection;
+      }
+    }
     return { song, section };
   }
 

@@ -132,18 +132,11 @@ export class JumpEngine {
   public async executeSongJump(song: Song): Promise<void> {
     console.log(`[JumpEngine] Executing song jump to "${song.name}" (cue id: ${song.id})`);
     await this.abletonBridge.jumpToCue(song.id);
-
-    if (!this.abletonBridge.isPlaying()) {
-      await this.abletonBridge.safePlay();
-    }
   }
 
   public async executeSectionJump(section: Section): Promise<void> {
     console.log(`[JumpEngine] Executing section jump to "${section.name}"`);
     await this.abletonBridge.jumpToCue(section.id);
-    if (!this.abletonBridge.isPlaying()) {
-      await this.abletonBridge.safePlay();
-    }
   }
 
   public getQueuedTarget() {

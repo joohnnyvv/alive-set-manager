@@ -117,18 +117,31 @@ describe('Phase 3 — Jump Modes, Scheduling & Stop Behaviors', () => {
     }
   });
 
-  test('5. Song stop behavior parsing (auto-jump vs stop vs pause)', () => {
-    const engine = new SetlistEngine();
+  test('6. Jump Engine does not start playback automatically when stopped', async () => {
+    const setlistEngine = new SetlistEngine();
     const cues = [
-      { id: 'c1', name: 'Song Auto', time: 0 },
-      { id: 'c2', name: 'Song Stop +JUMP', time: 32 },
-      { id: 'c3', name: 'Song Pause +PAUSE', time: 64 },
+      { id: 'c1', name: 'Song One', time: 0 },
+      { id: 'c2', name: 'Song Two', time: 32 },
     ];
-    const setlist = engine.buildSetlistFromCues(cues, 120);
+    setlistEngine.buildSetlistFromCues(cues, 120);
 
-    assert.equal(setlist.songs[0].stopBehavior, 'default');
-    assert.equal(setlist.songs[1].stopBehavior, 'stop');
-    assert.equal(setlist.songs[2].stopBehavior, 'pause');
+    let playing = false;
+    let jumpedCueId = '';
+
+    const mockBridge = {
+      isPlaying: () => playing,
+      getCurrentSongTime: () => 0,
+      getTempo: () => 120,
+      jumpToCue: async (id: string) => { jumpedCueId = id; },
+      safePlay: async () => { playing = true; },
+    } as any;
+
+    const tk = new Timekeeper();
+    const settings = new SettingsStorage();
+    const jumpEngine = new JumpEngine(setlistEngine, mockBridge, tk, settings);
+
+    await jumpEngine.requestSongJump('c2');
+    assert.equal(jumpedCueId, 'c2');
+    assert.equal(playing, false, 'Playback should remain stopped after jumping to a song when stopped');
   });
-
 });

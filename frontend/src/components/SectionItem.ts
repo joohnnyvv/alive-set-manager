@@ -34,8 +34,12 @@ export function renderSectionItem(
 
   btn.onclick = () => {
     logUi(`Clicked section tile: "${section.name}" (id: ${section.id})`);
-    if (navigator.vibrate) {
-      navigator.vibrate(25);
+    try {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator && (navigator as any).userActivation?.hasBeenActive) {
+        navigator.vibrate(25);
+      }
+    } catch {
+      // Ignore intervention
     }
     btn.classList.add('is-tapped');
     setTimeout(() => btn.classList.remove('is-tapped'), 200);

@@ -95,7 +95,9 @@ export class MidiEngine {
 
       // Check mapping matches
       for (const mapping of this.mappings) {
-        if (mapping.inputName && mapping.inputName !== portName) continue;
+        if (mapping.inputName && mapping.inputName.trim() !== '' && mapping.inputName !== 'Any Device') {
+          if (mapping.inputName !== portName) continue;
+        }
         if (mapping.messageType !== messageType) continue;
         if (mapping.channel && mapping.channel !== channel) continue;
 
@@ -103,6 +105,8 @@ export class MidiEngine {
           if (mapping.note !== undefined && mapping.note !== note) continue;
         } else if (messageType === 'cc') {
           if (mapping.cc !== undefined && mapping.cc !== cc) continue;
+        } else if (messageType === 'pc') {
+          if (mapping.note !== undefined && mapping.note !== note) continue;
         }
 
         // Trigger action
@@ -110,7 +114,13 @@ export class MidiEngine {
       }
     };
 
-    input.on('noteon', msg => handleMsg('note-on', msg));
+    input.on('noteon', msg => {
+      if (msg.velocity === 0) {
+        handleMsg('note-off', msg);
+      } else {
+        handleMsg('note-on', msg);
+      }
+    });
     input.on('noteoff', msg => handleMsg('note-off', msg));
     input.on('cc', msg => handleMsg('cc', msg));
     input.on('program', msg => handleMsg('pc', msg));
@@ -128,6 +138,16 @@ export class MidiEngine {
 
   public addMapping(mapping: MidiMapping): void {
     this.mappings.push(mapping);
+    this.saveMappings();
+  }
+
+  public updateMapping(updated: MidiMapping): void {
+    const idx = this.mappings.findIndex(m => m.id === updated.id);
+    if (idx !== -1) {
+      this.mappings[idx] = updated;
+    } else {
+      this.mappings.push(updated);
+    }
     this.saveMappings();
   }
 
