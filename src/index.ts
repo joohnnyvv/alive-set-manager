@@ -14,7 +14,7 @@ import { MidiAction } from './types/index.js';
 import { logInfo, logWarn, logError } from './utils/logger.js';
 
 async function main() {
-  console.log('=== Starting AbleSet Controller Backend ===');
+  console.log('=== Starting Alive Set Manager Backend ===');
 
   // 1. Storage
   const settingsStorage = new SettingsStorage();
@@ -243,30 +243,34 @@ async function main() {
   const settings = settingsStorage.getSettings();
   let port = settings.preferredPort || 8080;
 
-  const startServerOnPort = (p: number) => {
-    server.listen(p, () => {
-      const ips = getLocalIpAddresses();
-      console.log(`\n==================================================`);
-      console.log(` AbleSet Controller Server running on port ${p}`);
-      console.log(` Local access: http://localhost:${p}`);
-      ips.forEach(ip => console.log(` Mobile access: http://${ip}:${p}`));
-      console.log(`==================================================\n`);
-    });
+  return new Promise<number>((resolve, reject) => {
+    const startServerOnPort = (p: number) => {
+      server.listen(p, () => {
+        const ips = getLocalIpAddresses();
+        console.log(`\n==================================================`);
+        console.log(` Alive Set Manager Server running on port ${p}`);
+        console.log(` Local access: http://localhost:${p}`);
+        ips.forEach(ip => console.log(` Mobile access: http://${ip}:${p}`));
+        console.log(`==================================================\n`);
+        resolve(p);
+      });
 
-    server.on('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
-        console.warn(`Port ${p} is in use, trying port ${p + 1}...`);
-        startServerOnPort(p + 1);
-      } else {
-        console.error('Server listen error:', err);
-      }
-    });
-  };
+      server.on('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          console.warn(`Port ${p} is in use, trying port ${p + 1}...`);
+          startServerOnPort(p + 1);
+        } else {
+          console.error('Server listen error:', err);
+          reject(err);
+        }
+      });
+    };
 
-  startServerOnPort(port);
+    startServerOnPort(port);
+  });
 }
 
-function getLocalIpAddresses(): string[] {
+export function getLocalIpAddresses(): string[] {
   const interfaces = os.networkInterfaces();
   const ips: string[] = [];
   for (const name of Object.keys(interfaces)) {
@@ -279,6 +283,13 @@ function getLocalIpAddresses(): string[] {
   return ips;
 }
 
-main().catch(err => {
-  console.error('Fatal server startup error:', err);
-});
+export async function startBackendServer(): Promise<number> {
+  return main();
+}
+
+// Auto-run if executed directly via CLI (tsx or node)
+if (process.argv[1] && (process.argv[1].endsWith('index.ts') || process.argv[1].endsWith('index.js'))) {
+  main().catch(err => {
+    console.error('Fatal server startup error:', err);
+  });
+}

@@ -1,3 +1,5 @@
+import fs from 'fs';
+import os from 'os';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -6,6 +8,23 @@ import { AbletonBridge } from '../ableton/bridge.js';
 import { SettingsStorage } from '../storage/settings.js';
 import { SetlistStorage } from '../storage/setlist.js';
 import { PlaybackState } from '../types/index.js';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function getLocalIpAddresses(): string[] {
+  const interfaces = os.networkInterfaces();
+  const ips: string[] = [];
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        ips.push(iface.address);
+      }
+    }
+  }
+  return ips;
+}
 
 export function createHttpServer(
   setlistEngine: SetlistEngine,
@@ -19,8 +38,28 @@ export function createHttpServer(
   app.use(cors());
   app.use(express.json());
 
-  // Static files for production build
-  const staticPath = path.join(process.cwd(), 'dist', 'frontend');
+  // Static files for production build (supports local dev, node dist, packaged Electron .app, and asarUnpack)
+  const baseDir = __dirname.includes('app.asar.unpacked')
+    ? __dirname
+    : __dirname.replace('app.asar', 'app.asar.unpacked');
+
+  const possiblePaths = [
+    path.resolve(baseDir, '../../../frontend/dist'),
+    path.resolve(baseDir, '../../frontend/dist'),
+    path.resolve(__dirname, '../../../frontend/dist'),
+    path.resolve(__dirname, '../../frontend/dist'),
+    path.resolve(__dirname, '../frontend'),
+    path.resolve(process.cwd(), 'frontend', 'dist'),
+    path.resolve(process.cwd(), 'dist', 'frontend'),
+  ];
+
+  possiblePaths.forEach(p => {
+    console.log(`[HttpServer Debug] Checking static path "${p}": exists = ${fs.existsSync(p)}`);
+  });
+
+  const staticPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
+  console.log('[HttpServer] Serving static frontend from:', staticPath);
+
   app.use(express.static(staticPath));
 
   // REST API Endpoints
@@ -90,6 +129,11 @@ export function createHttpServer(
     res.json(setlist.songs);
   });
 
+  app.get('/api/ips', (req: Request, res: Response) => {
+    const ips = getLocalIpAddresses();
+    res.json({ ips, port: settingsStorage.getSettings().preferredPort || 8080 });
+  });
+
   app.get('/api/settings', (req: Request, res: Response) => {
     res.json(settingsStorage.getSettings());
   });
@@ -100,6 +144,19 @@ export function createHttpServer(
       await settingsStorage.updateSetting(key as any, val);
     }
     res.json(settingsStorage.getSettings());
+  });
+
+  // SPA Fallback Route for non-API routes (Express 5 compatible)
+  app.use((req: Request, res: Response, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/ws')) {
+      return next();
+    }
+    const indexPath = path.join(staticPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).send('Frontend build not found. Please run `npm run build`.');
+    }
   });
 
   return app;

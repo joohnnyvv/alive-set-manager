@@ -1,7 +1,10 @@
 import { AppState, ServerEvent, ClientAction, AppSettings, Setlist, PlaybackState } from '../types.js';
 import { WsClient } from '../api/websocket.js';
 
+const savedTheme = (localStorage.getItem('app-theme') as any) || 'midnight';
+
 const initialSettings: AppSettings = {
+  theme: savedTheme,
   jumpMode: 'quantized',
   autoJumpToNextSong: true,
   alwaysStopOnSongEnd: false,
@@ -63,7 +66,14 @@ export class Store {
       }
     );
 
+    this.applyTheme(this.state.settings.theme || savedTheme);
     this.wsClient.connect();
+  }
+
+  public applyTheme(theme: string): void {
+    if (!theme) return;
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('app-theme', theme);
   }
 
   public getState(): AppState {
@@ -88,6 +98,9 @@ export class Store {
         this.state.setlist = msg.payload.setlist;
         this.state.playback = msg.payload.playback;
         this.state.settings = msg.payload.settings;
+        if (msg.payload.settings.theme) {
+          this.applyTheme(msg.payload.settings.theme);
+        }
         if (msg.payload.settings.defaultView && this.state.currentView === 'setlist') {
           this.state.currentView = msg.payload.settings.defaultView;
         }
@@ -154,6 +167,12 @@ export class Store {
   }
 
   public dispatch(action: ClientAction): void {
+    if (action.type === 'settings.set') {
+      (this.state.settings as any)[action.key] = action.value;
+      if (action.key === 'theme') {
+        this.applyTheme(action.value);
+      }
+    }
     this.wsClient.send(action);
   }
 

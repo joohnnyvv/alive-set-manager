@@ -1,7 +1,10 @@
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 
-const SETLISTS_DIR = path.join(process.cwd(), 'setlists');
+function getSetlistsDir(): string {
+  return path.join(os.homedir(), '.ableset', 'setlists');
+}
 
 export interface SavedSetlistFile {
   version: number;
@@ -16,9 +19,9 @@ export class SetlistStorage {
     this.ensureDir();
   }
 
-  private async ensureDir() {
+  private async ensureDir(): Promise<void> {
     try {
-      await fs.mkdir(SETLISTS_DIR, { recursive: true });
+      await fs.mkdir(getSetlistsDir(), { recursive: true });
     } catch (err) {
       console.error('[SetlistStorage] Failed to create setlists dir:', err);
     }
@@ -27,7 +30,7 @@ export class SetlistStorage {
   public async listFiles(): Promise<string[]> {
     await this.ensureDir();
     try {
-      const files = await fs.readdir(SETLISTS_DIR);
+      const files = await fs.readdir(getSetlistsDir());
       return files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
     } catch (err) {
       console.error('[SetlistStorage] Error listing setlists:', err);
@@ -38,7 +41,7 @@ export class SetlistStorage {
   public async save(name: string, order: string[], overrides?: Record<string, any>): Promise<void> {
     await this.ensureDir();
     const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const filePath = path.join(SETLISTS_DIR, `${safeName}.json`);
+    const filePath = path.join(getSetlistsDir(), `${safeName}.json`);
 
     const fileContent: SavedSetlistFile = {
       version: 1,
@@ -54,7 +57,7 @@ export class SetlistStorage {
   public async load(name: string): Promise<SavedSetlistFile | null> {
     await this.ensureDir();
     const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const filePath = path.join(SETLISTS_DIR, `${safeName}.json`);
+    const filePath = path.join(getSetlistsDir(), `${safeName}.json`);
     try {
       const data = await fs.readFile(filePath, 'utf-8');
       return JSON.parse(data) as SavedSetlistFile;

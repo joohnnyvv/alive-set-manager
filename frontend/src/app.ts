@@ -4,7 +4,7 @@ import { renderPerformanceView } from './views/PerformanceView.js';
 import { renderSectionsView } from './views/SectionsView.js';
 import { renderSettingsView } from './views/SettingsView.js';
 import { formatClockTime, formatDuration } from './utils/formatTime.js';
-import { computeGoState } from './components/TransportControls.js';
+import { computeGoState, SVG_ICONS } from './components/TransportControls.js';
 
 function initApp() {
   const root = document.getElementById('app');
@@ -13,8 +13,12 @@ function initApp() {
   root.innerHTML = `
     <header class="app-header">
       <div class="header-logo">
-        <span class="logo-icon">⚡</span>
-        <span class="logo-text">AbleSet Controller</span>
+        <span class="logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 12h3l3-9 4 18 3-9h4"/>
+          </svg>
+        </span>
+        <span class="logo-text">Alive Set Manager</span>
       </div>
       <nav class="app-nav">
         <button class="nav-btn" data-view="setlist">Setlist</button>
@@ -177,11 +181,11 @@ function updateViewInPlace(viewEl: HTMLElement, state: any) {
   if (playBtn) {
     if (playback.isPlaying) {
       playBtn.classList.add('is-playing');
-      if (playBtn.textContent !== '⏸') playBtn.textContent = '⏸';
+      playBtn.innerHTML = SVG_ICONS.PAUSE;
       playBtn.title = 'Pause';
     } else {
       playBtn.classList.remove('is-playing');
-      if (playBtn.textContent !== '▶') playBtn.textContent = '▶';
+      playBtn.innerHTML = SVG_ICONS.PLAY;
       playBtn.title = 'Play';
     }
   }
@@ -192,7 +196,7 @@ function updateViewInPlace(viewEl: HTMLElement, state: any) {
     const gs = computeGoState(playback);
     const goIconSpan = goBtn.querySelector('.go-icon');
     const goLabelSpan = goBtn.querySelector('.go-label');
-    if (goIconSpan && goIconSpan.textContent !== gs.icon) goIconSpan.textContent = gs.icon;
+    if (goIconSpan && goIconSpan.innerHTML !== gs.icon) goIconSpan.innerHTML = gs.icon;
     if (goLabelSpan && goLabelSpan.textContent !== gs.text) goLabelSpan.textContent = gs.text;
 
     goBtn.className = 'btn-transport btn-go';

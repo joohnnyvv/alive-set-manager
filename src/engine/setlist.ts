@@ -36,7 +36,8 @@ export class SetlistEngine {
         // If we were building a previous song, finalize it
         if (currentSong) {
           currentSong.endTime = loc.time;
-          currentSong.duration = currentSong.duration || Math.max(0, ((loc.time - currentSong.startTime) / tempo) * 60);
+          const effTempo = currentSong.targetTempo || tempo;
+          currentSong.duration = currentSong.duration || Math.max(0, ((loc.time - currentSong.startTime) / effTempo) * 60);
           currentSong.sections = currentSections;
           songs.push(currentSong);
         }
@@ -57,6 +58,7 @@ export class SetlistEngine {
           startTime: loc.time,
           endTime: loc.time + 16, // fallback, updated by next locator or SONG END
           duration: loc.duration || 0,
+          targetTempo: loc.targetTempo,
           color: loc.color,
           tags: loc.tags,
           sections: [],
@@ -87,7 +89,8 @@ export class SetlistEngine {
       } else if (loc.type === 'song-end' || loc.type === 'stop') {
         if (currentSong) {
           currentSong.endTime = loc.time;
-          currentSong.duration = currentSong.duration || Math.max(0, ((loc.time - currentSong.startTime) / tempo) * 60);
+          const effTempo = currentSong.targetTempo || tempo;
+          currentSong.duration = currentSong.duration || Math.max(0, ((loc.time - currentSong.startTime) / effTempo) * 60);
           if (loc.type === 'stop') {
             currentSong.stopBehavior = 'stop';
           }
@@ -104,7 +107,8 @@ export class SetlistEngine {
       const lastLoc = activeLocators[activeLocators.length - 1];
       const fallbackEnd = lastLoc ? lastLoc.time + 32 : currentSong.startTime + 64;
       currentSong.endTime = fallbackEnd;
-      currentSong.duration = currentSong.duration || Math.max(0, ((fallbackEnd - currentSong.startTime) / tempo) * 60);
+      const effTempo = currentSong.targetTempo || tempo;
+      currentSong.duration = currentSong.duration || Math.max(0, ((fallbackEnd - currentSong.startTime) / effTempo) * 60);
       currentSong.sections = currentSections;
       songs.push(currentSong);
     }
@@ -129,6 +133,18 @@ export class SetlistEngine {
   public getSetlistState(tempo: number = 120, currentTime: number = 0, isPlaying: boolean = false): Setlist {
     const songMap = new Map(this.songs.map(s => [s.id, s]));
     const orderedSongs = this.order.map(id => songMap.get(id)).filter((s): s is Song => s !== undefined);
+
+    // Calculate tempo-aware dynamic durations for each song and section
+    for (const song of orderedSongs) {
+      const effTempo = song.targetTempo || tempo;
+      const beatLength = Math.max(0, song.endTime - song.startTime);
+      song.duration = (beatLength / effTempo) * 60;
+
+      for (const sec of song.sections) {
+        const secBeatLength = Math.max(0, sec.endTime - sec.startTime);
+        sec.duration = (secBeatLength / effTempo) * 60;
+      }
+    }
 
     // Calculate active song and section from playhead
     const active = this.getActiveSongAndSection(currentTime);

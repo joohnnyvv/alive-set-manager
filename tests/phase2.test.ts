@@ -119,6 +119,32 @@ describe('Phase 2 — Playback Control & State Tracking', () => {
     }
   });
 
+  test('6. Per-song target tempo tag (#140bpm) & tempo-aware duration calculation', () => {
+    const loc1 = parseLocator('Upbeat Song #140bpm', 0);
+    assert.equal(loc1.targetTempo, 140);
+
+    const loc2 = parseLocator('Slow Ballad {bpm: 80}', 64);
+    assert.equal(loc2.targetTempo, 80);
+
+    const engine = new SetlistEngine();
+    const cues = [
+      { id: 'c1', name: 'Upbeat Song #140bpm', time: 0 },
+      { id: 'c2', name: 'Slow Ballad {bpm: 80}', time: 140 },
+      { id: 'c3', name: 'SONG END', time: 220 },
+    ];
+
+    const setlist = engine.buildSetlistFromCues(cues, 120);
+
+    // Song 1: 140 beats at 140 BPM = 60 seconds
+    assert.equal(Math.round(setlist.songs[0].duration), 60);
+
+    // Song 2: 80 beats at 80 BPM = 60 seconds
+    assert.equal(Math.round(setlist.songs[1].duration), 60);
+
+    // Total Set Duration = 60s + 60s = 120 seconds
+    assert.equal(Math.round(setlist.totalDuration), 120);
+  });
+
 });
 
 async function getFilesRecursively(dir: string): Promise<string[]> {

@@ -1,6 +1,9 @@
 import { Store } from '../state/store.js';
 import { JumpMode, MidiAction, MidiMapping } from '../types.js';
 import { showToast } from '../components/Toast.js';
+import { apiFetch } from '../api/http.js';
+import QRCodeStylingPkg from 'qr-code-styling';
+const QRCodeStyling: any = (QRCodeStylingPkg as any).default || QRCodeStylingPkg;
 
 export function renderSettingsView(store: Store): HTMLElement {
   const view = document.createElement('div');
@@ -17,6 +20,86 @@ export function renderSettingsView(store: Store): HTMLElement {
 
   const container = document.createElement('div');
   container.className = 'settings-container';
+
+  // Section 0: App Theme & Color Palette
+  const currentTheme = settings.theme || 'midnight';
+  const themeSection = document.createElement('div');
+  themeSection.className = 'settings-card';
+  themeSection.innerHTML = `
+    <h3>App Theme & Color Palette</h3>
+    <p class="settings-desc">Select a refined color theme optimized for your environment (studio, dark stage, or outdoor daylight).</p>
+    <div class="theme-grid">
+      <div class="theme-card ${currentTheme === 'midnight' ? 'is-selected' : ''}" data-theme-val="midnight">
+        <div class="theme-preview theme-preview-midnight">
+          <div class="preview-header"></div>
+          <div class="preview-body">
+            <span class="preview-chip preview-chip-accent"></span>
+            <span class="preview-chip"></span>
+          </div>
+        </div>
+        <div class="theme-info">
+          <strong>Midnight Studio</strong>
+          <small>Toned dark mode with slate tones & emerald accents.</small>
+        </div>
+      </div>
+
+      <div class="theme-card ${currentTheme === 'live-dark' ? 'is-selected' : ''}" data-theme-val="live-dark">
+        <div class="theme-preview theme-preview-live-dark">
+          <div class="preview-header"></div>
+          <div class="preview-body">
+            <span class="preview-chip preview-chip-accent"></span>
+            <span class="preview-chip"></span>
+          </div>
+        </div>
+        <div class="theme-info">
+          <strong>Ableton Live Dark</strong>
+          <small>Classic Ableton Live 11/12 dark gray style with warm amber accents.</small>
+        </div>
+      </div>
+
+      <div class="theme-card ${currentTheme === 'live-light' ? 'is-selected' : ''}" data-theme-val="live-light">
+        <div class="theme-preview theme-preview-live-light">
+          <div class="preview-header"></div>
+          <div class="preview-body">
+            <span class="preview-chip preview-chip-accent"></span>
+            <span class="preview-chip"></span>
+          </div>
+        </div>
+        <div class="theme-info">
+          <strong>Ableton Live Light</strong>
+          <small>Light gray theme for bright daylight or outdoor festival stages.</small>
+        </div>
+      </div>
+
+      <div class="theme-card ${currentTheme === 'high-contrast' ? 'is-selected' : ''}" data-theme-val="high-contrast">
+        <div class="theme-preview theme-preview-high-contrast">
+          <div class="preview-header"></div>
+          <div class="preview-body">
+            <span class="preview-chip preview-chip-accent"></span>
+            <span class="preview-chip"></span>
+          </div>
+        </div>
+        <div class="theme-info">
+          <strong>High Contrast Stage</strong>
+          <small>Pitch black background with neon lime accents & bold borders.</small>
+        </div>
+      </div>
+    </div>
+  `;
+
+  themeSection.querySelectorAll('.theme-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const selectedTheme = card.getAttribute('data-theme-val');
+      if (selectedTheme) {
+        store.dispatch({ type: 'settings.set', key: 'theme', value: selectedTheme });
+        themeSection.querySelectorAll('.theme-card').forEach(c => c.classList.remove('is-selected'));
+        card.classList.add('is-selected');
+        showToast(`Theme updated to ${selectedTheme.replace('-', ' ')}`, 'info');
+      }
+    });
+  });
+
+  container.appendChild(themeSection);
 
   // Section 1: Jump Mode
   const jumpSection = document.createElement('div');
@@ -86,7 +169,7 @@ export function renderSettingsView(store: Store): HTMLElement {
       <h3>MIDI Controller Mapping</h3>
       <p class="settings-desc">Map hardware MIDI pedals or controllers using MIDI Learn.</p>
     </div>
-    <button class="btn btn-primary" id="btn-add-midi">＋ Add Mapping</button>
+    <button class="btn btn-primary" id="btn-add-midi">Add Mapping</button>
   `;
   midiSection.appendChild(midiHeader);
 
@@ -188,7 +271,7 @@ export function renderSettingsView(store: Store): HTMLElement {
       if ('wakeLock' in navigator) {
         await navigator.wakeLock.request('screen');
         showToast('Screen Wake Lock active!', 'success');
-        wakeBtn.textContent = 'Screen Lock Active ✓';
+        wakeBtn.textContent = 'Screen Lock Active';
         wakeBtn.disabled = true;
       } else {
         showToast('Wake Lock API not supported in this browser', 'error');
@@ -203,14 +286,86 @@ export function renderSettingsView(store: Store): HTMLElement {
   // Section 4: Connection Info
   const connSection = document.createElement('div');
   connSection.className = 'settings-card';
+  const currentHost = window.location.host || 'localhost:8080';
+
   connSection.innerHTML = `
     <h3>Mobile Device Connection</h3>
     <p class="settings-desc">Connect phones or tablets on stage using your local Wi-Fi network.</p>
-    <div class="connection-info">
-      <div>Server Address: <strong>http://${window.location.host}</strong></div>
-      <div>WebSocket Status: <span class="status-badge status-${state.connection}">${state.connection.toUpperCase()}</span></div>
+    <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:20px; margin-top:10px;">
+      <div class="connection-info" style="display:flex; flex-direction:column; gap:10px; flex:1; min-width:240px;">
+        <div>WebSocket Status: <span class="status-badge status-${state.connection}">${state.connection.toUpperCase()}</span></div>
+        <div>Local Address: <strong>http://${currentHost}</strong></div>
+        <div id="mobile-ips-container" style="display:flex; flex-direction:column; gap:4px;">
+          <span style="color:var(--text-secondary); font-size:0.85rem;">Mobile Wi-Fi Addresses:</span>
+          <strong style="color:var(--accent);">Loading Wi-Fi URLs...</strong>
+        </div>
+      </div>
+      <div id="qr-code-box" style="display:flex; flex-direction:column; align-items:center; background:rgba(255,255,255,0.03); padding:16px; border-radius:var(--radius-md); border:1px solid var(--border-color); min-width:180px;">
+        <div id="qr-code-canvas" style="width:160px; height:160px; display:flex; align-items:center; justify-content:center;"></div>
+        <small style="color:var(--text-secondary); margin-top:8px; font-weight:600;">Scan to Connect</small>
+      </div>
     </div>
   `;
+
+  apiFetch('/api/ips')
+    .then(r => r.json())
+    .then(data => {
+      const containerEl = connSection.querySelector('#mobile-ips-container');
+      const qrCanvasEl = connSection.querySelector('#qr-code-canvas') as HTMLElement;
+
+      const port = data.port || 8080;
+      const ips = data.ips && data.ips.length > 0 ? data.ips : ['localhost'];
+      const mainUrl = `http://${ips[0]}:${port}`;
+
+      if (containerEl) {
+        const urls = ips.map((ip: string) => `http://${ip}:${port}`);
+        containerEl.innerHTML = `
+          <span style="color:var(--text-secondary); font-size:0.85rem;">Mobile Wi-Fi Addresses:</span>
+          ${urls.map((u: string) => `<div style="font-size:1.05rem; font-weight:700; color:var(--accent); font-family:monospace;">${u}</div>`).join('')}
+        `;
+      }
+
+      if (qrCanvasEl) {
+        qrCanvasEl.innerHTML = '';
+        const qrCode = new QRCodeStyling({
+          width: 160,
+          height: 160,
+          type: 'svg',
+          data: mainUrl,
+          dotsOptions: {
+            color: '#00e676',
+            type: 'dots',
+            gradient: {
+              type: 'linear',
+              rotation: 45,
+              colorStops: [
+                { offset: 0, color: '#00e676' },
+                { offset: 1, color: '#00bcd4' },
+              ],
+            },
+          },
+          backgroundOptions: {
+            color: 'transparent',
+          },
+          cornersSquareOptions: {
+            color: '#00e676',
+            type: 'extra-rounded',
+          },
+          cornersDotOptions: {
+            color: '#00bcd4',
+            type: 'dot',
+          },
+        });
+        qrCode.append(qrCanvasEl);
+      }
+    })
+    .catch(() => {
+      const containerEl = connSection.querySelector('#mobile-ips-container');
+      if (containerEl) {
+        containerEl.innerHTML = `<div>Mobile URL: <strong>http://localhost:8080</strong></div>`;
+      }
+    });
+
   container.appendChild(connSection);
 
   view.appendChild(container);

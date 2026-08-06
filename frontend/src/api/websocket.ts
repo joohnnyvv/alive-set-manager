@@ -21,8 +21,8 @@ export class WsClient {
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     let host = window.location.host;
-    if (window.location.port === '5173') {
-      host = `${window.location.hostname}:8080`;
+    if (!host || window.location.protocol === 'file:' || window.location.port === '5173') {
+      host = 'localhost:8080';
     }
     const wsUrl = `${protocol}//${host}/ws`;
 

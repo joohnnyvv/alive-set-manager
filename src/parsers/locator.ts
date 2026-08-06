@@ -137,6 +137,9 @@ export function parseLocator(rawName: string, time: number): ParsedLocator {
     type = 'song';
   }
 
+  // Extract target BPM / tempo from tags, description, or raw name
+  const targetTempo = extractTargetTempo(tags, description, rawName);
+
   return {
     rawName,
     type,
@@ -146,9 +149,41 @@ export function parseLocator(rawName: string, time: number): ParsedLocator {
     color,
     tags,
     duration,
+    targetTempo,
     flags,
     transitionTarget,
   };
+}
+
+function extractTargetTempo(tags: string[], description?: string, rawName?: string): number | undefined {
+  // 1. Check tags (e.g. #140bpm, #bpm140, #140)
+  for (const tag of tags) {
+    const match = tag.match(/^(?:bpm)?(\d+)(?:bpm)?$/i);
+    if (match) {
+      const bpm = parseInt(match[1], 10);
+      if (bpm >= 40 && bpm <= 300) return bpm;
+    }
+  }
+
+  // 2. Check description (e.g. {bpm:140} or {140bpm})
+  if (description) {
+    const match = description.match(/(?:bpm[:\s]*)?(\d+)\s*bpm/i) || description.match(/bpm[:\s]*(\d+)/i);
+    if (match) {
+      const bpm = parseInt(match[1], 10);
+      if (bpm >= 40 && bpm <= 300) return bpm;
+    }
+  }
+
+  // 3. Check rawName (e.g. [140bpm] or [bpm:140])
+  if (rawName) {
+    const match = rawName.match(/\[(?:bpm[:\s]*)?(\d+)\s*bpm\]/i) || rawName.match(/\[bpm[:\s]*(\d+)\]/i);
+    if (match) {
+      const bpm = parseInt(match[1], 10);
+      if (bpm >= 40 && bpm <= 300) return bpm;
+    }
+  }
+
+  return undefined;
 }
 
 function createEmptyFlags(): LocatorFlags {

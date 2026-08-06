@@ -3,6 +3,7 @@ import { renderSongItem } from '../components/SongItem.js';
 import { Song, Section, StopBehavior } from '../types.js';
 import { formatDuration } from '../utils/formatTime.js';
 import { showToast } from '../components/Toast.js';
+import { apiFetch } from '../api/http.js';
 
 export function renderSetlistView(store: Store): HTMLElement {
   const view = document.createElement('div');
@@ -24,27 +25,27 @@ export function renderSetlistView(store: Store): HTMLElement {
 
   const addBtn = document.createElement('button');
   addBtn.className = 'btn btn-primary';
-  addBtn.innerHTML = '＋ Add Song';
+  addBtn.innerHTML = 'Add Song';
   addBtn.onclick = () => openAddSongModal(store);
 
   const saveBtn = document.createElement('button');
   saveBtn.className = 'btn btn-secondary';
-  saveBtn.innerHTML = '💾 Save';
+  saveBtn.innerHTML = 'Save';
   saveBtn.onclick = () => promptSaveSetlist(store);
 
   const loadBtn = document.createElement('button');
   loadBtn.className = 'btn btn-secondary';
-  loadBtn.innerHTML = '📂 Load';
+  loadBtn.innerHTML = 'Load';
   loadBtn.onclick = () => promptLoadSetlist(store);
 
   const copyTextBtn = document.createElement('button');
   copyTextBtn.className = 'btn btn-secondary';
-  copyTextBtn.innerHTML = '📋 Copy Text';
+  copyTextBtn.innerHTML = 'Copy Text';
   copyTextBtn.onclick = () => copySetlistAsText(store);
 
   const importTextBtn = document.createElement('button');
   importTextBtn.className = 'btn btn-secondary';
-  importTextBtn.innerHTML = '📥 Import Text';
+  importTextBtn.innerHTML = 'Import Text';
   importTextBtn.onclick = () => openImportTextModal(store);
 
   headerActions.appendChild(addBtn);
@@ -65,7 +66,13 @@ export function renderSetlistView(store: Store): HTMLElement {
     const emptyState = document.createElement('div');
     emptyState.className = 'empty-state';
     emptyState.innerHTML = `
-      <div class="empty-icon">🎵</div>
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18V5l12-2v13"/>
+          <circle cx="6" cy="18" r="3"/>
+          <circle cx="18" cy="16" r="3"/>
+        </svg>
+      </div>
       <h3>No Songs Available</h3>
       <p>Connect Ableton Live with Cue Point locators or add songs manually.</p>
     `;
@@ -336,26 +343,105 @@ function openImportTextModal(store: Store): void {
 }
 
 function promptSaveSetlist(store: Store): void {
-  const name = prompt('Enter setlist name:', `Setlist-${new Date().toISOString().slice(0, 10)}`);
-  if (name) {
-    store.dispatch({ type: 'setlist.save', name });
-    showToast(`Saved setlist "${name}"`, 'success');
-  }
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+
+  const content = document.createElement('div');
+  content.className = 'modal-content';
+
+  const defaultName = `Setlist-${new Date().toISOString().slice(0, 10)}`;
+
+  content.innerHTML = `
+    <div class="modal-header">
+      <h3>Save Setlist</h3>
+      <button class="btn-icon modal-close">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex; flex-direction:column; gap:14px;">
+      <label style="font-size:0.9rem; color:var(--text-secondary);">Enter a name for this setlist:</label>
+      <input type="text" id="save-setlist-name" class="input-search" value="${defaultName}" placeholder="My Concert Setlist" autofocus />
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-secondary cancel-btn">Cancel</button>
+        <button class="btn btn-primary save-btn">Save Setlist</button>
+      </div>
+    </div>
+  `;
+
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+
+  const closeBtn = content.querySelector('.modal-close') as HTMLElement;
+  const cancelBtn = content.querySelector('.cancel-btn') as HTMLElement;
+  const saveBtn = content.querySelector('.save-btn') as HTMLElement;
+  const input = content.querySelector('#save-setlist-name') as HTMLInputElement;
+
+  const closeModal = () => modal.remove();
+  closeBtn.onclick = closeModal;
+  cancelBtn.onclick = closeModal;
+  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+  saveBtn.onclick = () => {
+    const name = input.value.trim();
+    if (name) {
+      store.dispatch({ type: 'setlist.save', name });
+      showToast(`Saved setlist "${name}"`, 'success');
+      closeModal();
+    }
+  };
 }
 
 async function promptLoadSetlist(store: Store): Promise<void> {
   try {
-    const res = await fetch('/api/setlist/files');
+    const res = await apiFetch('/api/setlist/files');
     const files: string[] = await res.json();
-    if (files.length === 0) {
+    if (!files || files.length === 0) {
       showToast('No saved setlists found', 'info');
       return;
     }
-    const selected = prompt(`Select setlist to load:\nAvailable:\n${files.join('\n')}`, files[0]);
-    if (selected && files.includes(selected)) {
-      store.dispatch({ type: 'setlist.load', name: selected });
-      showToast(`Loaded setlist "${selected}"`, 'success');
-    }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop';
+
+    const content = document.createElement('div');
+    content.className = 'modal-content';
+
+    content.innerHTML = `
+      <div class="modal-header">
+        <h3>Load Saved Setlist</h3>
+        <button class="btn-icon modal-close">✕</button>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:14px;">
+        <label style="font-size:0.9rem; color:var(--text-secondary);">Select a saved setlist to load:</label>
+        <select id="load-setlist-select" class="select-input" style="width:100%;">
+          ${files.map(f => `<option value="${f}">${f}</option>`).join('')}
+        </select>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button class="btn btn-secondary cancel-btn">Cancel</button>
+          <button class="btn btn-primary apply-load-btn">Load Setlist</button>
+        </div>
+      </div>
+    `;
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+
+    const closeBtn = content.querySelector('.modal-close') as HTMLElement;
+    const cancelBtn = content.querySelector('.cancel-btn') as HTMLElement;
+    const applyBtn = content.querySelector('.apply-load-btn') as HTMLElement;
+    const select = content.querySelector('#load-setlist-select') as HTMLSelectElement;
+
+    const closeModal = () => modal.remove();
+    closeBtn.onclick = closeModal;
+    cancelBtn.onclick = closeModal;
+    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+    applyBtn.onclick = () => {
+      const selected = select.value;
+      if (selected) {
+        store.dispatch({ type: 'setlist.load', name: selected });
+        showToast(`Loaded setlist "${selected}"`, 'success');
+        closeModal();
+      }
+    };
   } catch (err) {
     showToast('Failed to fetch setlist files', 'error');
   }

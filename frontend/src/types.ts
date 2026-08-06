@@ -32,6 +32,7 @@ export interface Song {
   startTime: number;
   endTime: number;
   duration: number;
+  targetTempo?: number;
   color?: string;
   tags: string[];
   sections: Section[];
@@ -73,7 +74,10 @@ export interface PlaybackState {
 
 export type JumpMode = 'quantized' | 'end-of-section' | 'end-of-song' | 'dynamic' | 'manual';
 
+export type AppTheme = 'midnight' | 'live-dark' | 'live-light' | 'high-contrast';
+
 export interface AppSettings {
+  theme: AppTheme;
   jumpMode: JumpMode;
   autoJumpToNextSong: boolean;
   alwaysStopOnSongEnd: boolean;

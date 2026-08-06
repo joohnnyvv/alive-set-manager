@@ -1,7 +1,7 @@
 {
   "name": "alive-set-manager",
   "version": "1.0.0",
-  "main": "dist/src/index.js",
+  "main": "dist/src/electron/main.js",
   "type": "module",
   "scripts": {
     "dev:backend": "tsx watch src/index.ts",
@@ -9,9 +9,37 @@
     "dev:frontend": "vite frontend",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build:backend": "tsc",
-    "build:frontend": "vite build frontend",
+    "build:frontend": "vite build",
     "build": "npm run build:backend && npm run build:frontend",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "app:start": "electron .",
+    "pack:mac": "npm run build && electron-builder --mac dir",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "install:mac": "bash scripts/install-mac.sh"
+  },
+  "build": {
+    "appId": "com.ableset.controller",
+    "productName": "Alive Set Manager",
+    "directories": {
+      "output": "dist-app"
+    },
+    "asar": true,
+    "asarUnpack": [
+      "frontend/dist/**/*",
+      "dist/**/*"
+    ],
+    "files": [
+      "dist/**/*",
+      "frontend/dist/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    }
   },
   "keywords": [],
   "author": "",
@@ -22,6 +50,7 @@
     "cors": "^2.8.6",
     "easymidi": "^3.2.0",
     "express": "^5.2.1",
+    "qr-code-styling": "^1.9.2",
     "ws": "^8.21.2"
   },
   "devDependencies": {

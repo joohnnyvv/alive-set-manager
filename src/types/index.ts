@@ -22,6 +22,7 @@ export interface ParsedLocator {
   color?: string;
   tags: string[];
   duration?: number; // seconds (override from [mm:ss])
+  targetTempo?: number; // target BPM parsed from #140bpm or {bpm: 140}
   flags: LocatorFlags;
   transitionTarget?: string; // >>> Target
 }
@@ -47,6 +48,7 @@ export interface Song {
   startTime: number;       // Position in beats
   endTime: number;         // Position in beats
   duration: number;        // Duration in seconds
+  targetTempo?: number;    // Target BPM parsed from metadata
   color?: string;          // Color name
   tags: string[];          // Parsed from #hashtags
   sections: Section[];
@@ -88,7 +90,10 @@ export interface PlaybackState {
 
 export type JumpMode = 'quantized' | 'end-of-section' | 'end-of-song' | 'dynamic' | 'manual';
 
+export type AppTheme = 'midnight' | 'live-dark' | 'live-light' | 'high-contrast';
+
 export interface AppSettings {
+  theme: AppTheme;
   jumpMode: JumpMode;
   autoJumpToNextSong: boolean;
   alwaysStopOnSongEnd: boolean;

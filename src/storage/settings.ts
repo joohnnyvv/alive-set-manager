@@ -1,10 +1,18 @@
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 import { AppSettings } from '../types/index.js';
 
-const SETTINGS_FILE = path.join(process.cwd(), 'settings.json');
+function getStorageDir(): string {
+  return path.join(os.homedir(), '.ableset');
+}
+
+function getSettingsFilePath(): string {
+  return path.join(getStorageDir(), 'settings.json');
+}
 
 const defaultSettings: AppSettings = {
+  theme: 'midnight',
   jumpMode: 'quantized',
   autoJumpToNextSong: true,
   alwaysStopOnSongEnd: false,
@@ -18,9 +26,19 @@ const defaultSettings: AppSettings = {
 export class SettingsStorage {
   private settings: AppSettings = { ...defaultSettings };
 
-  public async load(): Promise<AppSettings> {
+  private async ensureDir(): Promise<void> {
     try {
-      const data = await fs.readFile(SETTINGS_FILE, 'utf-8');
+      await fs.mkdir(getStorageDir(), { recursive: true });
+    } catch (err) {
+      console.error('[SettingsStorage] Error creating settings directory:', err);
+    }
+  }
+
+  public async load(): Promise<AppSettings> {
+    await this.ensureDir();
+    const filePath = getSettingsFilePath();
+    try {
+      const data = await fs.readFile(filePath, 'utf-8');
       const loaded = JSON.parse(data);
       this.settings = { ...defaultSettings, ...loaded };
     } catch (err) {
@@ -31,8 +49,10 @@ export class SettingsStorage {
   }
 
   public async save(): Promise<void> {
+    await this.ensureDir();
+    const filePath = getSettingsFilePath();
     try {
-      await fs.writeFile(SETTINGS_FILE, JSON.stringify(this.settings, null, 2), 'utf-8');
+      await fs.writeFile(filePath, JSON.stringify(this.settings, null, 2), 'utf-8');
     } catch (err) {
       console.error('[SettingsStorage] Error saving settings:', err);
     }
