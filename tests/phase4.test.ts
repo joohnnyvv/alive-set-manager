@@ -94,4 +94,32 @@ describe('Phase 4 — Setlist Editor & Persistence', () => {
     assert.deepEqual(state.order, ['s2', 's3', 's1']);
   });
 
+  test('6. Song Duplication and Removal of Duplicates', () => {
+    const engine = new SetlistEngine();
+    const cues = [
+      { id: 's1', name: 'Hit Song', time: 0 },
+      { id: 's2', name: 'Balad', time: 32 },
+    ];
+    engine.buildSetlistFromCues(cues, 120);
+
+    // Duplicate 's1'
+    const dup = engine.duplicateSong('s1');
+    assert.ok(dup);
+    assert.equal(dup.isDuplicate, true);
+    assert.equal(dup.originalId, 's1');
+
+    let state = engine.getSetlistState();
+    assert.equal(state.order.length, 3);
+    assert.equal(state.order[0], 's1');
+    assert.equal(state.order[1], dup.id);
+    assert.equal(state.order[2], 's2');
+
+    // Remove duplicate song
+    engine.removeSong(dup.id);
+    state = engine.getSetlistState();
+    assert.equal(state.order.length, 2);
+    assert.deepEqual(state.order, ['s1', 's2']);
+    assert.equal(engine.getSongById(dup.id), undefined);
+  });
+
 });

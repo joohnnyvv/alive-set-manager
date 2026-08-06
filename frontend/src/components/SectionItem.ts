@@ -3,6 +3,8 @@ import { formatDuration } from '../utils/formatTime.js';
 import { getCssColor } from '../utils/colors.js';
 import { logUi } from '../utils/logger.js';
 
+import { renderChordPills } from '../utils/chords.js';
+
 export function renderSectionItem(
   section: Section,
   isActive: boolean,
@@ -16,6 +18,9 @@ export function renderSectionItem(
   const colorHex = getCssColor(section.color);
   btn.style.setProperty('--section-color', colorHex);
 
+  const headerRow = document.createElement('div');
+  headerRow.className = 'section-tile-header';
+
   const title = document.createElement('span');
   title.className = 'section-tile-name';
   title.textContent = (section.flags.quickJump ? '>> ' : '') + section.name;
@@ -24,12 +29,18 @@ export function renderSectionItem(
   duration.className = 'section-tile-duration';
   duration.textContent = formatDuration(section.duration);
 
+  headerRow.appendChild(title);
+  headerRow.appendChild(duration);
+  btn.appendChild(headerRow);
+
+  if (section.chords) {
+    const chordsEl = renderChordPills(section.chords, 'section-tile-chords');
+    btn.appendChild(chordsEl);
+  }
+
   // Section progress bar overlay inside tile
   const progressFill = document.createElement('div');
   progressFill.className = 'section-tile-progress';
-
-  btn.appendChild(title);
-  btn.appendChild(duration);
   btn.appendChild(progressFill);
 
   btn.onclick = () => {

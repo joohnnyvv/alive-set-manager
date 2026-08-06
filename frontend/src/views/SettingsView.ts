@@ -84,6 +84,20 @@ export function renderSettingsView(store: Store): HTMLElement {
           <small>Pitch black background with neon lime accents & bold borders.</small>
         </div>
       </div>
+
+      <div class="theme-card ${currentTheme === 'soft-dark' ? 'is-selected' : ''}" data-theme-val="soft-dark">
+        <div class="theme-preview theme-preview-soft-dark">
+          <div class="preview-header"></div>
+          <div class="preview-body">
+            <span class="preview-chip preview-chip-accent"></span>
+            <span class="preview-chip"></span>
+          </div>
+        </div>
+        <div class="theme-info">
+          <strong>Soft Dark</strong>
+          <small>Low-contrast dark theme with muted tones and zero sharp flare.</small>
+        </div>
+      </div>
     </div>
   `;
 

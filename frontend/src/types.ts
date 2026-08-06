@@ -13,8 +13,10 @@ export interface LocatorFlags {
 
 export interface Section {
   id: string;
+  originalId?: string;
   name: string;
   description?: string;
+  chords?: string;
   startTime: number;
   endTime: number;
   duration: number;
@@ -27,6 +29,8 @@ export type StopBehavior = 'auto-jump' | 'stop' | 'pause' | 'default';
 
 export interface Song {
   id: string;
+  originalId?: string;
+  isDuplicate?: boolean;
   name: string;
   description?: string;
   startTime: number;
@@ -74,7 +78,7 @@ export interface PlaybackState {
 
 export type JumpMode = 'quantized' | 'end-of-section' | 'end-of-song' | 'dynamic' | 'manual';
 
-export type AppTheme = 'midnight' | 'live-dark' | 'live-light' | 'high-contrast';
+export type AppTheme = 'midnight' | 'live-dark' | 'live-light' | 'high-contrast' | 'soft-dark';
 
 export interface AppSettings {
   theme: AppTheme;
@@ -162,7 +166,10 @@ export type ClientAction =
   | { type: 'setlist.reorder'; order: string[] }
   | { type: 'setlist.remove-song'; songId: string }
   | { type: 'setlist.restore-song'; songId: string }
+  | { type: 'setlist.duplicate-song'; songId: string }
+  | { type: 'setlist.delete-song'; songId: string }
   | { type: 'setlist.update-song'; songId: string; overrides: { color?: string; stopBehavior?: StopBehavior; duration?: number } }
+  | { type: 'setlist.update-section-chords'; sectionId: string; chords: string }
   | { type: 'setlist.import-text'; text: string }
   | { type: 'setlist.save'; name: string }
   | { type: 'setlist.load'; name: string }

@@ -23,6 +23,8 @@ export class JumpEngine {
       return;
     }
 
+    this.setlistEngine.setActiveSongId(song.id);
+
     const isPlaying = this.abletonBridge.isPlaying();
     const jumpMode = this.settingsStorage.getSettings().jumpMode;
     console.log(`[JumpEngine] requestSongJump: "${song.name}" (isPlaying: ${isPlaying}, jumpMode: ${jumpMode})`);
@@ -130,13 +132,20 @@ export class JumpEngine {
   }
 
   public async executeSongJump(song: Song): Promise<void> {
-    console.log(`[JumpEngine] Executing song jump to "${song.name}" (cue id: ${song.id})`);
-    await this.abletonBridge.jumpToCue(song.id);
+    this.setlistEngine.setActiveSongId(song.id);
+    const targetCueId = song.originalId || song.id;
+    console.log(`[JumpEngine] Executing song jump to "${song.name}" (cue id: ${targetCueId})`);
+    await this.abletonBridge.jumpToCue(targetCueId);
   }
 
   public async executeSectionJump(section: Section): Promise<void> {
-    console.log(`[JumpEngine] Executing section jump to "${section.name}"`);
-    await this.abletonBridge.jumpToCue(section.id);
+    const target = this.setlistEngine.getSectionById(section.id);
+    if (target) {
+      this.setlistEngine.setActiveSongId(target.song.id);
+    }
+    const targetCueId = section.originalId || section.id;
+    console.log(`[JumpEngine] Executing section jump to "${section.name}" (cue id: ${targetCueId})`);
+    await this.abletonBridge.jumpToCue(targetCueId);
   }
 
   public getQueuedTarget() {

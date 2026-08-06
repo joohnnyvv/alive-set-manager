@@ -75,6 +75,7 @@ export class SetlistEngine {
           id: loc.id,
           name: loc.name,
           description: loc.description,
+          chords: loc.chords,
           startTime: loc.time,
           endTime: nextTime,
           duration: sectionDuration,
@@ -113,16 +114,33 @@ export class SetlistEngine {
       songs.push(currentSong);
     }
 
-    // Assign / update order
-    this.songs = songs;
-    const existingOrderSet = new Set(this.order);
-    const newSongIds = songs.map(s => s.id);
-    
-    // Preserve existing order for songs that still exist, append new ones
-    const updatedOrder = this.order.filter(id => newSongIds.includes(id));
-    for (const id of newSongIds) {
-      if (!updatedOrder.includes(id)) {
-        updatedOrder.push(id);
+    // Preserve any duplicated songs from existing state whose original song still exists
+    const duplicates = this.songs.filter(s => s.isDuplicate && songs.some(orig => orig.id === (s.originalId || s.id)));
+    for (const dup of duplicates) {
+      const orig = songs.find(s => s.id === (dup.originalId || dup.id));
+      if (orig) {
+        dup.startTime = orig.startTime;
+        dup.endTime = orig.endTime;
+        dup.duration = orig.duration;
+        dup.targetTempo = orig.targetTempo;
+        dup.color = dup.color || orig.color;
+        dup.tags = orig.tags;
+        dup.sections = orig.sections.map((sec, idx) => ({
+          ...sec,
+          id: `${sec.originalId || sec.id}_dup_${dup.id}_${idx}`,
+          originalId: sec.originalId || sec.id,
+        }));
+      }
+    }
+
+    const allSongs = [...songs, ...duplicates];
+    this.songs = allSongs;
+
+    const validIds = new Set(allSongs.map(s => s.id));
+    const updatedOrder = this.order.filter(id => validIds.has(id));
+    for (const s of allSongs) {
+      if (!updatedOrder.includes(s.id)) {
+        updatedOrder.push(s.id);
       }
     }
     this.order = updatedOrder;
@@ -181,27 +199,77 @@ export class SetlistEngine {
     };
   }
 
-  public getActiveSongAndSection(currentTime: number): { song?: Song; section?: Section } {
-    // Find song where currentTime falls into [startTime, endTime)
-    let song = this.songs.find(s => currentTime >= s.startTime - 0.01 && currentTime < s.endTime - 0.01);
-    if (!song && this.songs.length > 0) {
-      const lastSong = [...this.songs].sort((a, b) => b.endTime - a.endTime)[0];
-      if (lastSong && currentTime >= lastSong.endTime - 0.05 && currentTime <= lastSong.endTime + 0.5) {
-        song = lastSong;
+  public setActiveSongId(songId?: string): void {
+    if (songId) {
+      const exists = this.songs.some(s => s.id === songId);
+      if (exists) {
+        this.activeSongId = songId;
       }
     }
-    if (!song) {
+  }
+
+  public getActiveSongAndSection(currentTime: number): { song?: Song; section?: Section } {
+    const songMap = new Map(this.songs.map(s => [s.id, s]));
+    const orderedSongs = this.order.map(id => songMap.get(id)).filter((s): s is Song => s !== undefined);
+
+    let activeSong: Song | undefined = undefined;
+
+    // 1. Check if currently active song ID is still valid for currentTime
+    if (this.activeSongId) {
+      const currentActive = songMap.get(this.activeSongId);
+      if (currentActive && !currentActive.isSkipped) {
+        if (currentTime >= currentActive.startTime - 0.01 && currentTime < currentActive.endTime - 0.01) {
+          activeSong = currentActive;
+        } else if (currentTime >= currentActive.endTime - 0.05 && currentTime <= currentActive.endTime + 0.5) {
+          activeSong = currentActive;
+        }
+      }
+    }
+
+    // 2. If playhead left current active song, check subsequent songs in setlist order
+    if (!activeSong && this.activeSongId) {
+      const currentIdx = this.order.indexOf(this.activeSongId);
+      if (currentIdx !== -1) {
+        for (let i = currentIdx + 1; i < this.order.length; i++) {
+          const nextSong = songMap.get(this.order[i]);
+          if (nextSong && !nextSong.isSkipped) {
+            if (currentTime >= nextSong.startTime - 0.01 && currentTime < nextSong.endTime - 0.01) {
+              activeSong = nextSong;
+              this.activeSongId = nextSong.id;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Fallback: Find first non-skipped song in setlist order matching currentTime
+    if (!activeSong) {
+      activeSong = orderedSongs.find(s => !s.isSkipped && currentTime >= s.startTime - 0.01 && currentTime < s.endTime - 0.01);
+      if (!activeSong && orderedSongs.length > 0) {
+        const lastSong = [...orderedSongs].filter(s => !s.isSkipped).sort((a, b) => b.endTime - a.endTime)[0];
+        if (lastSong && currentTime >= lastSong.endTime - 0.05 && currentTime <= lastSong.endTime + 0.5) {
+          activeSong = lastSong;
+        }
+      }
+      if (activeSong) {
+        this.activeSongId = activeSong.id;
+      }
+    }
+
+    if (!activeSong) {
       return { song: undefined, section: undefined };
     }
 
-    let section = song.sections.find(sec => currentTime >= sec.startTime - 0.01 && currentTime < sec.endTime - 0.01);
-    if (!section && song.sections.length > 0) {
-      const lastSection = [...song.sections].sort((a, b) => b.endTime - a.endTime)[0];
+    // Find section inside activeSong matching currentTime
+    let section = activeSong.sections.find(sec => currentTime >= sec.startTime - 0.01 && currentTime < sec.endTime - 0.01);
+    if (!section && activeSong.sections.length > 0) {
+      const lastSection = [...activeSong.sections].sort((a, b) => b.endTime - a.endTime)[0];
       if (lastSection && currentTime >= lastSection.endTime - 0.05 && currentTime <= lastSection.endTime + 0.5) {
         section = lastSection;
       }
     }
-    return { song, section };
+    return { song: activeSong, section };
   }
 
   public reorder(newOrder: string[]): void {
@@ -213,8 +281,53 @@ export class SetlistEngine {
   public removeSong(songId: string): void {
     const song = this.songs.find(s => s.id === songId);
     if (song) {
-      song.isSkipped = true;
+      if (song.isDuplicate) {
+        this.deleteSong(songId);
+      } else {
+        song.isSkipped = true;
+      }
     }
+  }
+
+  public deleteSong(songId: string): void {
+    this.order = this.order.filter(id => id !== songId);
+    const songIndex = this.songs.findIndex(s => s.id === songId);
+    if (songIndex !== -1 && this.songs[songIndex].isDuplicate) {
+      this.songs.splice(songIndex, 1);
+    }
+  }
+
+  public duplicateSong(songId: string): Song | undefined {
+    const originalSong = this.songs.find(s => s.id === songId);
+    if (!originalSong) return undefined;
+
+    const baseId = originalSong.originalId || originalSong.id;
+    const dupIndex = Date.now() + Math.floor(Math.random() * 1000);
+    const newId = `${baseId}_dup_${dupIndex}`;
+
+    const dupSong: Song = {
+      ...originalSong,
+      id: newId,
+      originalId: baseId,
+      isDuplicate: true,
+      isSkipped: false,
+      sections: originalSong.sections.map((sec, idx) => ({
+        ...sec,
+        id: `${sec.originalId || sec.id}_dup_${dupIndex}_${idx}`,
+        originalId: sec.originalId || sec.id,
+      })),
+    };
+
+    this.songs.push(dupSong);
+
+    const orderIdx = this.order.indexOf(songId);
+    if (orderIdx !== -1) {
+      this.order.splice(orderIdx + 1, 0, newId);
+    } else {
+      this.order.push(newId);
+    }
+
+    return dupSong;
   }
 
   public restoreSong(songId: string): void {
@@ -272,5 +385,12 @@ export class SetlistEngine {
       }
     }
     return undefined;
+  }
+
+  public updateSectionChords(sectionId: string, chords: string): void {
+    const res = this.getSectionById(sectionId);
+    if (res) {
+      res.section.chords = chords.trim() || undefined;
+    }
   }
 }

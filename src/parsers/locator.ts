@@ -20,12 +20,46 @@ export function parseLocator(rawName: string, time: number): ParsedLocator {
 
   let str = trimmed;
 
-  // Extract description inside {curly braces}
+  let chords: string | undefined;
+
+  // 1. Check for explicit chord bracket/brace syntax e.g. {chords: ...}, {c: ...}, [chords: ...], [c: ...]
+  const chordBraceMatch = str.match(/[\{\[\(]\s*(?:chords?|ch|c)\s*:\s*([^}\]\)]+)[\}\]\)]/i);
+  if (chordBraceMatch) {
+    chords = chordBraceMatch[1].trim();
+    str = str.replace(chordBraceMatch[0], '').trim();
+  }
+
+  // 2. Extract description inside {curly braces} if not consumed by explicit chords
   let description: string | undefined;
   const descMatch = str.match(/\{([^}]+)\}/);
   if (descMatch) {
-    description = descMatch[1].trim();
+    const content = descMatch[1].trim();
+    if (/^(?:chords?|ch|c)\s*:/i.test(content)) {
+      chords = content.replace(/^(?:chords?|ch|c)\s*:/i, '').trim();
+    } else if (!chords && isChordProgression(content)) {
+      chords = content;
+    } else {
+      description = content;
+    }
     str = str.replace(/\{([^}]+)\}/, '').trim();
+  }
+
+  // 3. Check for pipe chord syntax e.g. | C G Am F |
+  if (!chords) {
+    const pipeMatch = str.match(/\|\s*([^|]+)\s*\|/);
+    if (pipeMatch && isChordProgression(pipeMatch[1].trim())) {
+      chords = pipeMatch[1].trim();
+      str = str.replace(/\|\s*[^|]+\s*\|/, '').trim();
+    }
+  }
+
+  // 4. Check for inline c: or chords: in locator name e.g. > Chorus c: C G Am F
+  if (!chords) {
+    const inlineMatch = str.match(/\b(?:chords?|ch|c)\s*:\s*(.+)$/i);
+    if (inlineMatch) {
+      chords = inlineMatch[1].trim();
+      str = str.replace(/\b(?:chords?|ch|c)\s*:\s*.+$/i, '').trim();
+    }
   }
 
   // Extract duration override inside [mm:ss] or [sec]
@@ -145,6 +179,7 @@ export function parseLocator(rawName: string, time: number): ParsedLocator {
     type,
     name: name || rawName,
     description,
+    chords,
     time,
     color,
     tags,
@@ -153,6 +188,20 @@ export function parseLocator(rawName: string, time: number): ParsedLocator {
     flags,
     transitionTarget,
   };
+}
+
+export function isChordProgression(str: string): boolean {
+  if (!str || typeof str !== 'string') return false;
+  const trimmed = str.trim();
+  if (trimmed.length === 0) return false;
+  if (/^(?:chords?|ch|c)\s*:/i.test(trimmed)) return true;
+
+  const tokens = trimmed.split(/[\s\-\|,\/>]+/).filter(t => t.length > 0);
+  if (tokens.length === 0) return false;
+
+  const chordRegex = /^[A-Ga-g][#b]?(?:m|maj|min|dim|aug|sus|add|\d)*(?:\/[A-Ga-g][#b]?)?$/;
+  const validCount = tokens.filter(t => chordRegex.test(t)).length;
+  return validCount > 0 && validCount >= Math.ceil(tokens.length * 0.75);
 }
 
 function extractTargetTempo(tags: string[], description?: string, rawName?: string): number | undefined {

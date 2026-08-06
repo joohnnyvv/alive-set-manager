@@ -93,7 +93,11 @@ export function renderSetlistView(store: Store): HTMLElement {
         (s) => store.dispatch({ type: 'setlist.remove-song', songId: s.id }),
         (s) => store.dispatch({ type: 'setlist.restore-song', songId: s.id }),
         (sec) => store.dispatch({ type: 'jump-to-section', sectionId: sec.id }),
-        (s) => openEditSongModal(store, s)
+        (s) => openEditSongModal(store, s),
+        (s) => {
+          store.dispatch({ type: 'setlist.duplicate-song', songId: s.id });
+          showToast(`Duplicated "${s.name}" in setlist`, 'success');
+        }
       );
 
       // Setup Drag and Drop
@@ -254,6 +258,20 @@ function openEditSongModal(store: Store, song: Song): void {
         </select>
       </div>
 
+      ${song.sections && song.sections.length > 0 ? `
+        <div class="setting-group" style="margin-top: 6px;">
+          <label style="font-weight: 700; font-size: 0.9rem; margin-bottom: 8px; display: block; color: var(--accent);">Section Chord Progressions</label>
+          <div style="display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto; padding-right:4px;">
+            ${song.sections.map(sec => `
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:0.85rem; font-weight:600; width:110px; min-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${sec.name}">${sec.name}</span>
+                <input type="text" data-sec-id="${sec.id}" class="edit-section-chords input-text" style="flex:1; padding:6px 10px; font-size:0.85rem; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-primary);" placeholder="e.g. C - G - Am - F" value="${sec.chords || ''}" />
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
         <button class="btn btn-secondary cancel-btn">Cancel</button>
         <button class="btn btn-primary save-btn">Save Changes</button>
@@ -280,6 +298,22 @@ function openEditSongModal(store: Store, song: Song): void {
       type: 'setlist.update-song',
       songId: song.id,
       overrides: { color, stopBehavior },
+    });
+
+    const sectionInputs = content.querySelectorAll<HTMLInputElement>('.edit-section-chords');
+    sectionInputs.forEach(input => {
+      const secId = input.dataset.secId;
+      if (secId) {
+        const newChords = input.value;
+        const currentSec = song.sections.find(s => s.id === secId);
+        if (currentSec && (currentSec.chords || '') !== newChords) {
+          store.dispatch({
+            type: 'setlist.update-section-chords',
+            sectionId: secId,
+            chords: newChords,
+          });
+        }
+      }
     });
 
     showToast(`Updated options for ${song.name}`, 'success');

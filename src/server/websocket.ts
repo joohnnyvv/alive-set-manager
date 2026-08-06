@@ -173,8 +173,23 @@ export class WsServer {
         this.broadcastUpdatedSetlist();
         break;
 
+      case 'setlist.duplicate-song':
+        this.setlistEngine.duplicateSong(action.songId);
+        this.broadcastUpdatedSetlist();
+        break;
+
+      case 'setlist.delete-song':
+        this.setlistEngine.deleteSong(action.songId);
+        this.broadcastUpdatedSetlist();
+        break;
+
       case 'setlist.update-song':
         this.setlistEngine.updateSongOverride(action.songId, action.overrides);
+        this.broadcastUpdatedSetlist();
+        break;
+
+      case 'setlist.update-section-chords':
+        this.setlistEngine.updateSectionChords(action.sectionId, action.chords);
         this.broadcastUpdatedSetlist();
         break;
 

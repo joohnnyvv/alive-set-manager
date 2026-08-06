@@ -14,10 +14,11 @@ export function renderSongItem(
   onRemoveClick?: (song: Song) => void,
   onRestoreClick?: (song: Song) => void,
   onSectionClick?: (section: Section) => void,
-  onEditClick?: (song: Song) => void
+  onEditClick?: (song: Song) => void,
+  onDuplicateClick?: (song: Song) => void
 ): HTMLElement {
   const container = document.createElement('div');
-  container.className = `song-item ${isActive ? 'is-active' : ''} ${isQueued ? 'is-queued' : ''} ${song.isSkipped ? 'is-skipped' : ''} ${song.isNonSong ? 'is-non-song' : ''}`;
+  container.className = `song-item ${isActive ? 'is-active' : ''} ${isQueued ? 'is-queued' : ''} ${song.isSkipped ? 'is-skipped' : ''} ${song.isNonSong ? 'is-non-song' : ''} ${song.isDuplicate ? 'is-duplicate' : ''}`;
   container.dataset.id = song.id;
 
   const colorHex = getCssColor(song.color);
@@ -46,6 +47,29 @@ export function renderSongItem(
 
   titleBox.appendChild(songNum);
   titleBox.appendChild(songName);
+
+  // Stop Mode Badge
+  const stopBadge = document.createElement('span');
+  const behavior = song.stopBehavior || 'default';
+  const labelMap: Record<string, string> = {
+    'stop': '⏹ STOP',
+    'pause': '⏸ PAUSE',
+    'auto-jump': '⏭ AUTO',
+    'default': '⏭ AUTO',
+  };
+  stopBadge.className = `stop-mode-badge stop-mode-${behavior}`;
+  stopBadge.textContent = labelMap[behavior] || '⏭ AUTO';
+  stopBadge.title = `Stop mode at song end: ${behavior}`;
+  titleBox.appendChild(stopBadge);
+
+  // Repeat Badge for duplicated songs
+  if (song.isDuplicate) {
+    const dupBadge = document.createElement('span');
+    dupBadge.className = 'duplicate-badge';
+    dupBadge.textContent = '⧉ REPEAT';
+    dupBadge.title = 'Repeated song instance in setlist';
+    titleBox.appendChild(dupBadge);
+  }
 
   if (song.description) {
     const desc = document.createElement('span');
@@ -87,6 +111,18 @@ export function renderSongItem(
     };
     rightBox.appendChild(restoreBtn);
   } else {
+    if (onDuplicateClick) {
+      const dupBtn = document.createElement('button');
+      dupBtn.className = 'btn-icon btn-duplicate';
+      dupBtn.innerHTML = '⧉';
+      dupBtn.title = 'Duplicate / Repeat song in setlist';
+      dupBtn.onclick = (e) => {
+        e.stopPropagation();
+        onDuplicateClick(song);
+      };
+      rightBox.appendChild(dupBtn);
+    }
+
     if (onEditClick) {
       const editBtn = document.createElement('button');
       editBtn.className = 'btn-icon btn-edit';
@@ -102,7 +138,7 @@ export function renderSongItem(
     const removeBtn = document.createElement('button');
     removeBtn.className = 'btn-icon btn-remove';
     removeBtn.innerHTML = '✕';
-    removeBtn.title = 'Skip song';
+    removeBtn.title = song.isDuplicate ? 'Remove duplicate song' : 'Skip song';
     removeBtn.onclick = (e) => {
       e.stopPropagation();
       if (onRemoveClick) onRemoveClick(song);

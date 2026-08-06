@@ -7,6 +7,7 @@ A web-based setlist controller for **Ableton Live** designed for live stage perf
 ## 🚀 Features
 
 - **Stage-Optimized UI**: High contrast, bold typography, large touch targets (minimum 48×48dp, GO button 72px+), responsive for phones, tablets, and desktops.
+- **Section Chord Progressions**: Display stage-ready chord progression badges (`C` • `G` • `Am` • `F`) for each section in Performance View and Sections View; edit section chords on the fly in the Setlist Editor.
 - **5 Jump Modes**:
   - **Quantized**: Immediate jump, letting Ableton quantize naturally on the beat grid.
   - **End of Section**: Queues target; triggers jump pre-activation when current section finishes.
@@ -15,7 +16,7 @@ A web-based setlist controller for **Ableton Live** designed for live stage perf
   - **Manual**: Queues target until manual GO button press or playback stop.
 - **Pre-Activation Jump Engine**: Triggers Ableton locators `~50–100ms` ahead of musical boundaries so Live's internal quantization lands precisely on beat 1 bar 1.
 - **Arrangement Protection**: Uses `safeStartPlaying()` and `safeStopPlaying()` wrappers to completely prevent Ableton arrangement jump-to-start bugs.
-- **Setlist Editor**: Drag-and-drop song reordering, soft skip/restore, song detail overrides (color & stop behavior), plain text copy/import.
+- **Setlist Editor**: Drag-and-drop song reordering, song duplication (`⧉`) for repeated tracks, soft skip/restore, stop mode badges (`⏹ STOP`, `⏸ PAUSE`, `⏭ AUTO`), song detail overrides, plain text copy/import.
 - **MIDI Controller Engine**: Full MIDI Learn support for Notes, CC, and Program Changes (`easymidi`).
 - **Screen Wake Lock**: Prevents phone screens from sleeping during live sets (`navigator.wakeLock`).
 - **Network Discovery**: Automatic Wi-Fi LAN IP display for quick mobile pairing.
@@ -34,6 +35,8 @@ In Ableton Live, create arrangement locators using the following naming conventi
 |----------------------|--------------------|
 | `Never Gonna Give You Up` | **Song Start**: Defines the beginning of a song. |
 | `> Verse 1` | **Section**: Defines a section inside the preceding song. |
+| `> Chorus {chords: C - G - Am - F}` | **Chord Progression**: Adds section chords badge (`C` • `G` • `Am` • `F`). |
+| `> Chorus {c: C G Am F}` or `{C G Am F}` | **Chord Syntax Alternatives**: Short prefix `c:` or direct chords in curly braces. |
 | `>> Chorus` | **Quick Access Section**: Highlighted for fast stage jumping. |
 | `{Key: C, Capo 1}` | **Description**: Adds metadata shown in curly braces. |
 | `#rock #live` | **Hashtag Tags**: Enables tag filtering in the song picker. |
@@ -50,9 +53,9 @@ In Ableton Live, create arrangement locators using the following naming conventi
 #### Example Arrangement Layout:
 ```text
 [0.0.0]  Follow Night {Capo 2} #rock [blue]
-[16.0.0] > Intro
-[32.0.0] >> Chorus +LOOP
-[64.0.0] > Outro
+[16.0.0] > Intro {C - G}
+[32.0.0] >> Chorus {chords: C - G - Am - F} +LOOP
+[64.0.0] > Outro {Am - F - C - G}
 [80.0.0] SONG END
 [96.0.0] Acoustic Song {Tuning: DADGAD}
 [128.0]  STOP
@@ -137,7 +140,7 @@ npm test
 ```
 
 Tests cover:
-- Locator parser & metadata extraction
+- Locator parser & section chord progression extraction
 - Setlist engine & playhead boundary detection
 - Lookahead timekeeper scheduler & jump state machine
 - Jump modes & pre-activation timing

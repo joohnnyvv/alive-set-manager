@@ -2,8 +2,10 @@ import { Store } from '../state/store.js';
 import { renderProgressBar } from '../components/ProgressBar.js';
 import { renderTransportControls } from '../components/TransportControls.js';
 import { renderQueueIndicator } from '../components/QueueIndicator.js';
+import { renderSectionItem } from '../components/SectionItem.js';
 import { formatClockTime, formatDuration } from '../utils/formatTime.js';
 import { getCssColor } from '../utils/colors.js';
+import { renderChordPills } from '../utils/chords.js';
 
 export function renderPerformanceView(store: Store): HTMLElement {
   const view = document.createElement('div');
@@ -14,6 +16,7 @@ export function renderPerformanceView(store: Store): HTMLElement {
   const setlist = state.setlist;
 
   const activeSong = setlist.songs.find(s => s.id === playback.activeSongId);
+  const activeSection = activeSong?.sections.find(sec => sec.id === playback.activeSectionId);
 
   // Find next non-skipped song
   const activeSongs = setlist.songs.filter(s => !s.isSkipped);
@@ -69,11 +72,47 @@ export function renderPerformanceView(store: Store): HTMLElement {
     const colorHex = getCssColor(activeSong.color);
     nowPlayingCard.style.borderLeft = `8px solid ${colorHex}`;
 
-    nowPlayingCard.innerHTML = `
-      <div class="now-playing-label">NOW PLAYING</div>
-      <h1 class="now-playing-title">${activeSong.name}</h1>
-      ${activeSong.description ? `<div class="now-playing-desc">{${activeSong.description}}</div>` : ''}
-    `;
+    const label = document.createElement('div');
+    label.className = 'now-playing-label';
+    label.textContent = 'NOW PLAYING';
+
+    const title = document.createElement('h1');
+    title.className = 'now-playing-title';
+    title.textContent = activeSong.name;
+
+    nowPlayingCard.appendChild(label);
+    nowPlayingCard.appendChild(title);
+
+    if (activeSong.description) {
+      const desc = document.createElement('div');
+      desc.className = 'now-playing-desc';
+      desc.textContent = `{${activeSong.description}}`;
+      nowPlayingCard.appendChild(desc);
+    }
+
+    // Active Section & Chord Progression Card inside Hero
+    const activeSectionBox = document.createElement('div');
+    activeSectionBox.className = 'active-section-hero';
+
+    if (activeSection) {
+      const secName = document.createElement('div');
+      secName.className = 'active-section-name';
+      secName.innerHTML = `<span class="sec-label">SECTION:</span> <strong>${activeSection.name}</strong>`;
+      activeSectionBox.appendChild(secName);
+
+      if (activeSection.chords) {
+        const chordContainer = document.createElement('div');
+        chordContainer.className = 'hero-chord-container';
+        const chordTitle = document.createElement('span');
+        chordTitle.className = 'hero-chord-label';
+        chordTitle.textContent = 'CHORDS:';
+        const chordPills = renderChordPills(activeSection.chords, 'hero-chord-pills');
+        chordContainer.appendChild(chordTitle);
+        chordContainer.appendChild(chordPills);
+        activeSectionBox.appendChild(chordContainer);
+      }
+    }
+    nowPlayingCard.appendChild(activeSectionBox);
   } else {
     nowPlayingCard.innerHTML = `
       <div class="now-playing-label">NO SONG PLAYING</div>
@@ -93,6 +132,36 @@ export function renderPerformanceView(store: Store): HTMLElement {
     activeSong ? `Song Progress (${formatDuration(playback.remainingTimeInSong)} left)` : 'Set Idle'
   );
   view.appendChild(progressBar);
+
+  // Song Sections & Chords Stage Strip
+  if (activeSong && activeSong.sections && activeSong.sections.length > 0) {
+    const sectionsCard = document.createElement('div');
+    sectionsCard.className = 'stage-sections-card';
+
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'stage-sections-header';
+    cardHeader.innerHTML = `<span>Song Sections & Chord Progressions</span>`;
+    sectionsCard.appendChild(cardHeader);
+
+    const sectionsList = document.createElement('div');
+    sectionsList.className = 'stage-sections-list';
+
+    activeSong.sections.forEach(section => {
+      const isActive = playback.activeSectionId === section.id;
+      const isQueued = playback.queuedSectionId === section.id;
+
+      const tile = renderSectionItem(
+        section,
+        isActive,
+        isQueued,
+        (sec) => store.dispatch({ type: 'jump-to-section', sectionId: sec.id })
+      );
+      sectionsList.appendChild(tile);
+    });
+
+    sectionsCard.appendChild(sectionsList);
+    view.appendChild(sectionsCard);
+  }
 
   // Next Song Preview Card
   const nextSongCard = document.createElement('div');

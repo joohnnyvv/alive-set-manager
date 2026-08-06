@@ -5,6 +5,7 @@ import { renderSectionsView } from './views/SectionsView.js';
 import { renderSettingsView } from './views/SettingsView.js';
 import { formatClockTime, formatDuration } from './utils/formatTime.js';
 import { computeGoState, SVG_ICONS } from './components/TransportControls.js';
+import { renderChordPills } from './utils/chords.js';
 
 function initApp() {
   const root = document.getElementById('app');
@@ -50,6 +51,7 @@ function initApp() {
   let activeQueueKey: string = '';
   let activeMidiKey: string = '';
   let lastActiveSongId: string | undefined = undefined;
+  let lastActiveSectionId: string | undefined = undefined;
 
   store.subscribe((state) => {
     // Update nav active state
@@ -72,17 +74,20 @@ function initApp() {
     const currentMidiKey = `${state.midi.learning ? state.midi.learningMappingId : 'idle'}_${state.midi.mappings.length}_${state.midi.mappings.map(m => m.id + ':' + m.inputName + ':' + m.messageType + ':' + m.channel + ':' + (m.note ?? '') + ':' + (m.cc ?? '')).join('|')}`;
 
     const activeSongChanged = state.playback.activeSongId !== lastActiveSongId;
+    const activeSectionChanged = state.playback.activeSectionId !== lastActiveSectionId;
     const queueChanged = currentQueueKey !== activeQueueKey;
     const midiChanged = currentMidiKey !== activeMidiKey;
 
     lastActiveSongId = state.playback.activeSongId;
+    lastActiveSectionId = state.playback.activeSectionId;
 
-    // ⭐ Rebuild DOM if view changed, DOM missing, setlist structure/skipped state changed, active song changed, queued target changed, or MIDI settings changed
+    // ⭐ Rebuild DOM if view changed, DOM missing, setlist structure/skipped state changed, active song/section changed, queued target changed, or MIDI settings changed
     if (
       state.currentView !== activeViewName ||
       !activeViewEl ||
       currentSetlistKey !== activeSetlistKey ||
       activeSongChanged ||
+      activeSectionChanged ||
       queueChanged ||
       midiChanged
     ) {
@@ -252,6 +257,53 @@ function updateViewInPlace(viewEl: HTMLElement, state: any) {
       }
     }
   });
+
+  // 9. Active section hero display & chord pills in Performance view
+  const activeSectionHero = viewEl.querySelector('.active-section-hero');
+  if (activeSectionHero) {
+    const activeSection = activeSong?.sections.find((sec: any) => sec.id === playback.activeSectionId);
+    const secNameEl = activeSectionHero.querySelector('.active-section-name');
+    if (secNameEl) {
+      const targetHTML = activeSection
+        ? `<span class="sec-label">SECTION:</span> <strong>${activeSection.name}</strong>`
+        : `<span class="sec-label">SECTION:</span> <strong>—</strong>`;
+      if (secNameEl.innerHTML !== targetHTML) {
+        secNameEl.innerHTML = targetHTML;
+      }
+    }
+
+    const chordContainer = activeSectionHero.querySelector('.hero-chord-container');
+    if (activeSection && activeSection.chords) {
+      const currentChords = (activeSectionHero as HTMLElement).dataset.currentChords;
+      if (currentChords !== activeSection.chords) {
+        (activeSectionHero as HTMLElement).dataset.currentChords = activeSection.chords;
+        if (chordContainer) {
+          const newPills = renderChordPills(activeSection.chords, 'hero-chord-pills');
+          const oldPills = chordContainer.querySelector('.hero-chord-pills');
+          if (oldPills) {
+            oldPills.replaceWith(newPills);
+          } else {
+            chordContainer.appendChild(newPills);
+          }
+        } else {
+          const newContainer = document.createElement('div');
+          newContainer.className = 'hero-chord-container';
+          const label = document.createElement('span');
+          label.className = 'hero-chord-label';
+          label.textContent = 'CHORDS:';
+          const pills = renderChordPills(activeSection.chords, 'hero-chord-pills');
+          newContainer.appendChild(label);
+          newContainer.appendChild(pills);
+          activeSectionHero.appendChild(newContainer);
+        }
+      }
+    } else {
+      (activeSectionHero as HTMLElement).dataset.currentChords = '';
+      if (chordContainer) {
+        chordContainer.remove();
+      }
+    }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', initApp);
