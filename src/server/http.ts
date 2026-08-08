@@ -8,6 +8,7 @@ import { AbletonBridge } from '../ableton/bridge.js';
 import { SettingsStorage } from '../storage/settings.js';
 import { SetlistStorage } from '../storage/setlist.js';
 import { PlaybackState } from '../types/index.js';
+import { MidiEngine } from '../midi/engine.js';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -31,7 +32,8 @@ export function createHttpServer(
   abletonBridge: AbletonBridge,
   settingsStorage: SettingsStorage,
   setlistStorage: SetlistStorage,
-  getPlaybackState: () => PlaybackState
+  getPlaybackState: () => PlaybackState,
+  midiEngine?: MidiEngine
 ) {
   const app = express();
 
@@ -70,15 +72,17 @@ export function createHttpServer(
     const setlist = setlistEngine.getSetlistState(tempo, currentTime, isPlaying);
     const playback = getPlaybackState();
     const settings = settingsStorage.getSettings();
+    const midiDevices = midiEngine ? midiEngine.getDevices() : { inputs: [], outputs: [] };
+    const midiMappings = midiEngine ? midiEngine.getMappings() : [];
 
     res.json({
       setlist,
       playback,
       settings,
       midi: {
-        inputs: [],
-        outputs: [],
-        mappings: [],
+        inputs: midiDevices.inputs,
+        outputs: midiDevices.outputs,
+        mappings: midiMappings,
         learning: false,
       },
     });
@@ -144,6 +148,25 @@ export function createHttpServer(
       await settingsStorage.updateSetting(key as any, val);
     }
     res.json(settingsStorage.getSettings());
+  });
+
+  app.get('/api/midi/devices', (req: Request, res: Response) => {
+    const devices = midiEngine ? midiEngine.getDevices() : { inputs: [], outputs: [] };
+    res.json(devices);
+  });
+
+  app.get('/api/midi/mappings', (req: Request, res: Response) => {
+    const mappings = midiEngine ? midiEngine.getMappings() : [];
+    res.json(mappings);
+  });
+
+  app.post('/api/midi/mappings', async (req: Request, res: Response) => {
+    if (midiEngine && Array.isArray(req.body)) {
+      await midiEngine.setMappings(req.body);
+      res.json({ success: true, mappings: midiEngine.getMappings() });
+    } else {
+      res.status(400).json({ error: 'Invalid mappings array' });
+    }
   });
 
   // SPA Fallback Route for non-API routes (Express 5 compatible)

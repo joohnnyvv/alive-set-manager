@@ -1,0 +1,21 @@
+[
+  {
+    "id": "learn-test-1",
+    "inputName": "",
+    "messageType": "note-on",
+    "channel": 1,
+    "action": {
+      "type": "play"
+    }
+  },
+  {
+    "id": "m1",
+    "inputName": "Test Pedal",
+    "messageType": "note-on",
+    "channel": 1,
+    "note": 60,
+    "action": {
+      "type": "go"
+    }
+  }
+]

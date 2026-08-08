@@ -11,7 +11,7 @@ import { MidiEngine } from './midi/engine.js';
 import { createHttpServer } from './server/http.js';
 import { WsServer } from './server/websocket.js';
 import { MidiAction } from './types/index.js';
-import { logInfo, logWarn, logError } from './utils/logger.js';
+import { logInfo } from './utils/logger.js';
 
 async function main() {
   console.log('=== Starting Alive Set Manager Backend ===');
@@ -104,7 +104,8 @@ async function main() {
     abletonBridge,
     settingsStorage,
     setlistStorage,
-    () => playbackTracker.getPlaybackState()
+    () => playbackTracker.getPlaybackState(),
+    midiEngine
   );
 
   const server = http.createServer(app);

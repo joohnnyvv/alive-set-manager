@@ -7,13 +7,20 @@ import { MidiMapping } from '../src/types/index.js';
 
 describe('Phase 5 — MIDI Mapping & GO Button Logic', () => {
 
-  test('1. MIDI Engine Device Discovery & Mapping Persistence', async () => {
-    let triggeredAction: any;
-    const engine = new MidiEngine((action) => {
-      triggeredAction = action;
-    });
+  test('1. MIDI Engine Device Discovery & Mapping Persistence across restarts', async () => {
+    const testStorageFile = path.join(process.cwd(), 'scratch', 'test-midi-mappings.json');
+    try {
+      await fs.unlink(testStorageFile);
+    } catch {}
 
-    const devices = engine.getDevices();
+    let triggeredAction: any;
+    const engine1 = new MidiEngine((action) => {
+      triggeredAction = action;
+    }, undefined, testStorageFile);
+
+    await engine1.init();
+
+    const devices = engine1.getDevices();
     assert.ok(Array.isArray(devices.inputs));
     assert.ok(Array.isArray(devices.outputs));
 
@@ -26,22 +33,36 @@ describe('Phase 5 — MIDI Mapping & GO Button Logic', () => {
       action: { type: 'go' },
     };
 
-    engine.addMapping(mapping);
-    assert.equal(engine.getMappings().length, 1);
-    assert.equal(engine.getMappings()[0].id, 'm1');
+    await engine1.addMapping(mapping);
+    assert.equal(engine1.getMappings().length, 1);
+    assert.equal(engine1.getMappings()[0].id, 'm1');
 
-    engine.removeMapping('m1');
-    assert.equal(engine.getMappings().length, 0);
+    // Simulate closing the app and restarting a new instance
+    const engine2 = new MidiEngine(() => {}, undefined, testStorageFile);
+    await engine2.init();
 
-    // Clean up file
-    const filePath = path.join(process.cwd(), 'midi-mappings.json');
+    assert.equal(engine2.getMappings().length, 1, 'Mappings must be preserved after restarting the app');
+    assert.equal(engine2.getMappings()[0].id, 'm1');
+    assert.equal(engine2.getMappings()[0].inputName, 'Test Pedal');
+    assert.equal(engine2.getMappings()[0].note, 60);
+
+    // Remove mapping and verify deletion persists
+    await engine2.removeMapping('m1');
+    assert.equal(engine2.getMappings().length, 0);
+
+    const engine3 = new MidiEngine(() => {}, undefined, testStorageFile);
+    await engine3.init();
+    assert.equal(engine3.getMappings().length, 0, 'Removal of mapping must persist after restart');
+
+    // Clean up test file
     try {
-      await fs.unlink(filePath);
-    } catch (err) {}
+      await fs.unlink(testStorageFile);
+    } catch {}
   });
 
-  test('2. MIDI Learn mode state handling', () => {
-    const engine = new MidiEngine(() => {});
+  test('2. MIDI Learn mode state handling', async () => {
+    const testStorageFile = path.join(process.cwd(), 'scratch', 'test-midi-learn.json');
+    const engine = new MidiEngine(() => {}, undefined, testStorageFile);
     const mapping: MidiMapping = {
       id: 'learn-test-1',
       inputName: '',
@@ -50,17 +71,20 @@ describe('Phase 5 — MIDI Mapping & GO Button Logic', () => {
       action: { type: 'play' },
     };
 
-    engine.addMapping(mapping);
+    await engine.addMapping(mapping);
     engine.startLearn('learn-test-1');
     assert.equal(engine.getMappings()[0].id, 'learn-test-1');
 
     engine.cancelLearn();
+
+    try {
+      await fs.unlink(testStorageFile);
+    } catch {}
   });
 
   test('3. Smart GO Button Logic Matrix', async () => {
     // Scenario 1: Stopped inside song -> Play
     let playCalled = false;
-    let stopCalled = false;
     let loopEscaped = false;
 
     const mockState1 = {

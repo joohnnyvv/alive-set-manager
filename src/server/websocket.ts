@@ -69,7 +69,7 @@ export class WsServer {
       ws.on('message', async (data: string) => {
         try {
           const action = JSON.parse(data.toString()) as ClientAction;
-          await this.handleClientAction(ws, action);
+          await this.handleClientAction(action);
         } catch (err) {
           logError('WS', 'Failed to process message:', err);
           this.sendToClient(ws, {
@@ -90,7 +90,7 @@ export class WsServer {
     });
   }
 
-  private async handleClientAction(ws: WebSocket, action: ClientAction): Promise<void> {
+  private async handleClientAction(action: ClientAction): Promise<void> {
     logInfo('WS RX Action', JSON.stringify(action));
     switch (action.type) {
       case 'play':
@@ -233,21 +233,21 @@ export class WsServer {
 
       case 'midi.add-mapping':
         if (this.midiEngine) {
-          this.midiEngine.addMapping(action.mapping);
+          await this.midiEngine.addMapping(action.mapping);
           this.broadcast({ type: 'midi.mappings', payload: this.midiEngine.getMappings() });
         }
         break;
 
       case 'midi.remove-mapping':
         if (this.midiEngine) {
-          this.midiEngine.removeMapping(action.mappingId);
+          await this.midiEngine.removeMapping(action.mappingId);
           this.broadcast({ type: 'midi.mappings', payload: this.midiEngine.getMappings() });
         }
         break;
 
       case 'midi.update-mapping':
         if (this.midiEngine) {
-          this.midiEngine.updateMapping(action.mapping);
+          await this.midiEngine.updateMapping(action.mapping);
           this.broadcast({ type: 'midi.mappings', payload: this.midiEngine.getMappings() });
         }
         break;
