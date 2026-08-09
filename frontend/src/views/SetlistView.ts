@@ -25,27 +25,27 @@ export function renderSetlistView(store: Store): HTMLElement {
 
   const addBtn = document.createElement('button');
   addBtn.className = 'btn btn-primary';
-  addBtn.innerHTML = 'Add Song';
+  addBtn.textContent = 'Add Song';
   addBtn.onclick = () => openAddSongModal(store);
 
   const saveBtn = document.createElement('button');
   saveBtn.className = 'btn btn-secondary';
-  saveBtn.innerHTML = 'Save';
+  saveBtn.textContent = 'Save';
   saveBtn.onclick = () => promptSaveSetlist(store);
 
   const loadBtn = document.createElement('button');
   loadBtn.className = 'btn btn-secondary';
-  loadBtn.innerHTML = 'Load';
+  loadBtn.textContent = 'Load';
   loadBtn.onclick = () => promptLoadSetlist(store);
 
   const copyTextBtn = document.createElement('button');
   copyTextBtn.className = 'btn btn-secondary';
-  copyTextBtn.innerHTML = 'Copy Text';
+  copyTextBtn.textContent = 'Copy Text';
   copyTextBtn.onclick = () => copySetlistAsText(store);
 
   const importTextBtn = document.createElement('button');
   importTextBtn.className = 'btn btn-secondary';
-  importTextBtn.innerHTML = 'Import Text';
+  importTextBtn.textContent = 'Import Text';
   importTextBtn.onclick = () => openImportTextModal(store);
 
   headerActions.appendChild(addBtn);
@@ -202,19 +202,31 @@ function openAddSongModal(store: Store): void {
     filtered.forEach(s => {
       const row = document.createElement('div');
       row.className = 'search-result-item';
-      row.innerHTML = `
-        <div>
-          <strong>${s.name}</strong> ${s.description ? `<small>{${s.description}}</small>` : ''}
-        </div>
-        <button class="btn btn-sm btn-primary">Add</button>
-      `;
-      row.querySelector('button')!.onclick = () => {
+
+      const labelBox = document.createElement('div');
+      const strong = document.createElement('strong');
+      strong.textContent = s.name;
+      labelBox.appendChild(strong);
+
+      if (s.description) {
+        const small = document.createElement('small');
+        small.textContent = ` {${s.description}}`;
+        labelBox.appendChild(small);
+      }
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'btn btn-sm btn-primary';
+      addBtn.textContent = 'Add';
+      addBtn.onclick = () => {
         if (s.isSkipped) {
           store.dispatch({ type: 'setlist.restore-song', songId: s.id });
         }
         showToast(`Added ${s.name} to active setlist`, 'success');
         modal.remove();
       };
+
+      row.appendChild(labelBox);
+      row.appendChild(addBtn);
       resultsContainer.appendChild(row);
     });
   };
@@ -230,61 +242,141 @@ function openEditSongModal(store: Store, song: Song): void {
   const content = document.createElement('div');
   content.className = 'modal-content';
 
-  content.innerHTML = `
-    <div class="modal-header">
-      <h3>Edit Song: ${song.name}</h3>
-      <button class="btn-icon modal-close">✕</button>
-    </div>
-    <div class="modal-body" style="display:flex; flex-direction:column; gap:14px;">
-      <div class="setting-row">
-        <label>Song Color</label>
-        <select id="edit-color" class="select-input">
-          <option value="" ${!song.color ? 'selected' : ''}>Default</option>
-          <option value="red" ${song.color === 'red' ? 'selected' : ''}>Red</option>
-          <option value="orange" ${song.color === 'orange' ? 'selected' : ''}>Orange</option>
-          <option value="yellow" ${song.color === 'yellow' ? 'selected' : ''}>Yellow</option>
-          <option value="green" ${song.color === 'green' ? 'selected' : ''}>Green</option>
-          <option value="blue" ${song.color === 'blue' ? 'selected' : ''}>Blue</option>
-          <option value="purple" ${song.color === 'purple' ? 'selected' : ''}>Purple</option>
-        </select>
-      </div>
+  const header = document.createElement('div');
+  header.className = 'modal-header';
 
-      <div class="setting-row">
-        <label>Stop Behavior at Song End</label>
-        <select id="edit-stop-behavior" class="select-input">
-          <option value="default" ${song.stopBehavior === 'default' ? 'selected' : ''}>Default (Auto-jump)</option>
-          <option value="stop" ${song.stopBehavior === 'stop' ? 'selected' : ''}>Stop Playback</option>
-          <option value="pause" ${song.stopBehavior === 'pause' ? 'selected' : ''}>Pause Playback</option>
-        </select>
-      </div>
+  const headerTitle = document.createElement('h3');
+  headerTitle.textContent = `Edit Song: ${song.name}`;
 
-      ${song.sections && song.sections.length > 0 ? `
-        <div class="setting-group" style="margin-top: 6px;">
-          <label style="font-weight: 700; font-size: 0.9rem; margin-bottom: 8px; display: block; color: var(--accent);">Section Chord Progressions</label>
-          <div style="display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto; padding-right:4px;">
-            ${song.sections.map(sec => `
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:0.85rem; font-weight:600; width:110px; min-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${sec.name}">${sec.name}</span>
-                <input type="text" data-sec-id="${sec.id}" class="edit-section-chords input-text" style="flex:1; padding:6px 10px; font-size:0.85rem; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-primary);" placeholder="e.g. C - G - Am - F" value="${sec.chords || ''}" />
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      ` : ''}
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'btn-icon modal-close';
+  closeBtn.textContent = '✕';
 
-      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
-        <button class="btn btn-secondary cancel-btn">Cancel</button>
-        <button class="btn btn-primary save-btn">Save Changes</button>
-      </div>
-    </div>
+  header.appendChild(headerTitle);
+  header.appendChild(closeBtn);
+  content.appendChild(header);
+
+  const body = document.createElement('div');
+  body.className = 'modal-body';
+  body.style.display = 'flex';
+  body.style.flexDirection = 'column';
+  body.style.gap = '14px';
+
+  // Color selection
+  const colorRow = document.createElement('div');
+  colorRow.className = 'setting-row';
+  colorRow.innerHTML = `
+    <label>Song Color</label>
+    <select id="edit-color" class="select-input">
+      <option value="" ${!song.color ? 'selected' : ''}>Default</option>
+      <option value="red" ${song.color === 'red' ? 'selected' : ''}>Red</option>
+      <option value="orange" ${song.color === 'orange' ? 'selected' : ''}>Orange</option>
+      <option value="yellow" ${song.color === 'yellow' ? 'selected' : ''}>Yellow</option>
+      <option value="green" ${song.color === 'green' ? 'selected' : ''}>Green</option>
+      <option value="blue" ${song.color === 'blue' ? 'selected' : ''}>Blue</option>
+      <option value="purple" ${song.color === 'purple' ? 'selected' : ''}>Purple</option>
+    </select>
   `;
+  body.appendChild(colorRow);
 
+  // Stop behavior
+  const stopRow = document.createElement('div');
+  stopRow.className = 'setting-row';
+  stopRow.innerHTML = `
+    <label>Stop Behavior at Song End</label>
+    <select id="edit-stop-behavior" class="select-input">
+      <option value="default" ${song.stopBehavior === 'default' ? 'selected' : ''}>Default (Auto-jump)</option>
+      <option value="stop" ${song.stopBehavior === 'stop' ? 'selected' : ''}>Stop Playback</option>
+      <option value="pause" ${song.stopBehavior === 'pause' ? 'selected' : ''}>Pause Playback</option>
+    </select>
+  `;
+  body.appendChild(stopRow);
+
+  // Sections and Chords
+  if (song.sections && song.sections.length > 0) {
+    const secGroup = document.createElement('div');
+    secGroup.className = 'setting-group';
+    secGroup.style.marginTop = '6px';
+
+    const secLabel = document.createElement('label');
+    secLabel.style.fontWeight = '700';
+    secLabel.style.fontSize = '0.9rem';
+    secLabel.style.marginBottom = '8px';
+    secLabel.style.display = 'block';
+    secLabel.style.color = 'var(--accent)';
+    secLabel.textContent = 'Section Chord Progressions';
+    secGroup.appendChild(secLabel);
+
+    const secList = document.createElement('div');
+    secList.style.display = 'flex';
+    secList.style.flexDirection = 'column';
+    secList.style.gap = '8px';
+    secList.style.maxHeight = '180px';
+    secList.style.overflowY = 'auto';
+    secList.style.paddingRight = '4px';
+
+    song.sections.forEach(sec => {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.gap = '8px';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.style.fontSize = '0.85rem';
+      nameSpan.style.fontWeight = '600';
+      nameSpan.style.width = '110px';
+      nameSpan.style.minWidth = '110px';
+      nameSpan.style.overflow = 'hidden';
+      nameSpan.style.textOverflow = 'ellipsis';
+      nameSpan.style.whiteSpace = 'nowrap';
+      nameSpan.title = sec.name;
+      nameSpan.textContent = sec.name;
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.dataset.secId = sec.id;
+      input.className = 'edit-section-chords input-text';
+      input.style.flex = '1';
+      input.style.padding = '6px 10px';
+      input.style.fontSize = '0.85rem';
+      input.style.background = 'var(--bg-secondary)';
+      input.style.border = '1px solid var(--border-color)';
+      input.style.borderRadius = 'var(--radius-sm)';
+      input.style.color = 'var(--text-primary)';
+      input.placeholder = 'e.g. C - G - Am - F';
+      input.value = sec.chords || '';
+
+      row.appendChild(nameSpan);
+      row.appendChild(input);
+      secList.appendChild(row);
+    });
+
+    secGroup.appendChild(secList);
+    body.appendChild(secGroup);
+  }
+
+  // Buttons
+  const actions = document.createElement('div');
+  actions.style.display = 'flex';
+  actions.style.justifyContent = 'flex-end';
+  actions.style.gap = '10px';
+  actions.style.marginTop = '10px';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-secondary cancel-btn';
+  cancelBtn.textContent = 'Cancel';
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn btn-primary save-btn';
+  saveBtn.textContent = 'Save Changes';
+
+  actions.appendChild(cancelBtn);
+  actions.appendChild(saveBtn);
+  body.appendChild(actions);
+
+  content.appendChild(body);
   modal.appendChild(content);
   document.body.appendChild(modal);
-
-  const closeBtn = content.querySelector('.modal-close') as HTMLElement;
-  const cancelBtn = content.querySelector('.cancel-btn') as HTMLElement;
-  const saveBtn = content.querySelector('.save-btn') as HTMLElement;
 
   const closeModal = () => modal.remove();
   closeBtn.onclick = closeModal;
@@ -445,9 +537,7 @@ async function promptLoadSetlist(store: Store): Promise<void> {
       </div>
       <div class="modal-body" style="display:flex; flex-direction:column; gap:14px;">
         <label style="font-size:0.9rem; color:var(--text-secondary);">Select a saved setlist to load:</label>
-        <select id="load-setlist-select" class="select-input" style="width:100%;">
-          ${files.map(f => `<option value="${f}">${f}</option>`).join('')}
-        </select>
+        <select id="load-setlist-select" class="select-input" style="width:100%;"></select>
         <div style="display:flex; justify-content:flex-end; gap:10px;">
           <button class="btn btn-secondary cancel-btn">Cancel</button>
           <button class="btn btn-primary apply-load-btn">Load Setlist</button>
@@ -455,13 +545,20 @@ async function promptLoadSetlist(store: Store): Promise<void> {
       </div>
     `;
 
+    const select = content.querySelector('#load-setlist-select') as HTMLSelectElement;
+    files.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f;
+      opt.textContent = f;
+      select.appendChild(opt);
+    });
+
     modal.appendChild(content);
     document.body.appendChild(modal);
 
     const closeBtn = content.querySelector('.modal-close') as HTMLElement;
     const cancelBtn = content.querySelector('.cancel-btn') as HTMLElement;
     const applyBtn = content.querySelector('.apply-load-btn') as HTMLElement;
-    const select = content.querySelector('#load-setlist-select') as HTMLSelectElement;
 
     const closeModal = () => modal.remove();
     closeBtn.onclick = closeModal;

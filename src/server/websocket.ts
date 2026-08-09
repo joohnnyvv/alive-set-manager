@@ -8,6 +8,7 @@ import { SetlistStorage } from '../storage/setlist.js';
 import { JumpEngine } from '../engine/jump.js';
 import { MidiEngine } from '../midi/engine.js';
 
+import { isOriginAllowed } from './http.js';
 import { logInfo, logError, logWarn } from '../utils/logger.js';
 
 export class WsServer {
@@ -24,7 +25,32 @@ export class WsServer {
     private getPlaybackState: () => PlaybackState,
     private midiEngine?: MidiEngine
   ) {
-    this.wss = new WebSocketServer({ server, path: '/ws' });
+    this.wss = new WebSocketServer({
+      server,
+      path: '/ws',
+      verifyClient: (info, callback) => {
+        // 1. Origin verification
+        if (!isOriginAllowed(info.origin)) {
+          logWarn('WS', `Rejected connection from unauthorized origin: ${info.origin}`);
+          callback(false, 403, 'Forbidden origin');
+          return;
+        }
+
+        // 2. Auth token verification if configured
+        const settings = this.settingsStorage.getSettings();
+        if (settings.authToken) {
+          const reqUrl = new URL(info.req.url || '', `http://${info.req.headers.host || 'localhost'}`);
+          const token = reqUrl.searchParams.get('token') || (info.req.headers['x-auth-token'] as string);
+          if (token !== settings.authToken) {
+            logWarn('WS', `Rejected connection with invalid or missing auth token`);
+            callback(false, 401, 'Unauthorized');
+            return;
+          }
+        }
+
+        callback(true);
+      },
+    });
     this.setupWss();
   }
 
@@ -213,15 +239,19 @@ export class WsServer {
         break;
 
       case 'settings.set':
-        await this.settingsStorage.updateSetting(action.key as any, action.value);
-        this.broadcast({
-          type: 'state',
-          payload: {
-            setlist: this.setlistEngine.getSetlistState(),
-            playback: this.getPlaybackState(),
-            settings: this.settingsStorage.getSettings(),
-          },
-        });
+        try {
+          await this.settingsStorage.updateSetting(action.key as any, action.value);
+          this.broadcast({
+            type: 'state',
+            payload: {
+              setlist: this.setlistEngine.getSetlistState(),
+              playback: this.getPlaybackState(),
+              settings: this.settingsStorage.getSettings(),
+            },
+          });
+        } catch (err: any) {
+          logError('WS', `Failed to update setting "${action.key}":`, err);
+        }
         break;
 
       case 'midi.learn':

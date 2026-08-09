@@ -8,7 +8,15 @@ export function renderQueueIndicator(
 
   const labelBox = document.createElement('div');
   labelBox.className = 'queue-banner-info';
-  labelBox.innerHTML = `<span class="queue-spinner-dot"></span> Jumping to: <strong>${queuedName}</strong>`;
+
+  const dot = document.createElement('span');
+  dot.className = 'queue-spinner-dot';
+  labelBox.appendChild(dot);
+  labelBox.appendChild(document.createTextNode(' Jumping to: '));
+
+  const strong = document.createElement('strong');
+  strong.textContent = queuedName;
+  labelBox.appendChild(strong);
 
   const btnBox = document.createElement('div');
   btnBox.className = 'queue-banner-actions';

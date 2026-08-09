@@ -50,6 +50,10 @@ export class SetlistEngine {
           stopBehavior = 'stop';
         }
 
+        // Check if existing song with same id had overrides
+        const existingSong = this.songs.find(s => s.id === loc.id);
+        const durationOverride = existingSong?.durationOverride ?? loc.duration;
+
         // Start new song
         currentSong = {
           id: loc.id,
@@ -57,14 +61,15 @@ export class SetlistEngine {
           description: loc.description,
           startTime: loc.time,
           endTime: loc.time + 16, // fallback, updated by next locator or SONG END
-          duration: loc.duration || 0,
+          duration: durationOverride || 0,
+          durationOverride,
           targetTempo: loc.targetTempo,
-          color: loc.color,
+          color: existingSong?.color || loc.color,
           tags: loc.tags,
           sections: [],
-          stopBehavior,
+          stopBehavior: existingSong?.stopBehavior || stopBehavior,
           isNonSong: loc.flags.nosong,
-          isSkipped: loc.flags.skip,
+          isSkipped: existingSong?.isSkipped ?? loc.flags.skip,
         };
         currentSections = [];
       } else if (loc.type === 'section') {
@@ -91,7 +96,9 @@ export class SetlistEngine {
         if (currentSong) {
           currentSong.endTime = loc.time;
           const effTempo = currentSong.targetTempo || tempo;
-          currentSong.duration = currentSong.duration || Math.max(0, ((loc.time - currentSong.startTime) / effTempo) * 60);
+          if (currentSong.durationOverride === undefined) {
+            currentSong.duration = Math.max(0, ((loc.time - currentSong.startTime) / effTempo) * 60);
+          }
           if (loc.type === 'stop') {
             currentSong.stopBehavior = 'stop';
           }
@@ -109,7 +116,9 @@ export class SetlistEngine {
       const fallbackEnd = lastLoc ? lastLoc.time + 32 : currentSong.startTime + 64;
       currentSong.endTime = fallbackEnd;
       const effTempo = currentSong.targetTempo || tempo;
-      currentSong.duration = currentSong.duration || Math.max(0, ((fallbackEnd - currentSong.startTime) / effTempo) * 60);
+      if (currentSong.durationOverride === undefined) {
+        currentSong.duration = Math.max(0, ((fallbackEnd - currentSong.startTime) / effTempo) * 60);
+      }
       currentSong.sections = currentSections;
       songs.push(currentSong);
     }
@@ -121,7 +130,8 @@ export class SetlistEngine {
       if (orig) {
         dup.startTime = orig.startTime;
         dup.endTime = orig.endTime;
-        dup.duration = orig.duration;
+        dup.durationOverride = orig.durationOverride;
+        dup.duration = orig.durationOverride !== undefined ? orig.durationOverride : orig.duration;
         dup.targetTempo = orig.targetTempo;
         dup.color = dup.color || orig.color;
         dup.tags = orig.tags;
@@ -156,7 +166,11 @@ export class SetlistEngine {
     for (const song of orderedSongs) {
       const effTempo = song.targetTempo || tempo;
       const beatLength = Math.max(0, song.endTime - song.startTime);
-      song.duration = (beatLength / effTempo) * 60;
+      if (song.durationOverride !== undefined && song.durationOverride > 0) {
+        song.duration = song.durationOverride;
+      } else {
+        song.duration = (beatLength / effTempo) * 60;
+      }
 
       for (const sec of song.sections) {
         const secBeatLength = Math.max(0, sec.endTime - sec.startTime);
@@ -356,7 +370,10 @@ export class SetlistEngine {
     if (song) {
       if (overrides.color !== undefined) song.color = overrides.color;
       if (overrides.stopBehavior !== undefined) song.stopBehavior = overrides.stopBehavior;
-      if (overrides.duration !== undefined) song.duration = overrides.duration;
+      if (overrides.duration !== undefined) {
+        song.duration = overrides.duration;
+        song.durationOverride = overrides.duration;
+      }
     }
   }
 

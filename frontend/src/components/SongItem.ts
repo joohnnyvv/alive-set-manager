@@ -30,7 +30,7 @@ export function renderSongItem(
   // Drag handle
   const dragHandle = document.createElement('span');
   dragHandle.className = 'drag-handle';
-  dragHandle.innerHTML = '⋮⋮';
+  dragHandle.textContent = '⋮⋮';
   dragHandle.title = 'Drag to reorder';
 
   // Number & Title
@@ -103,7 +103,7 @@ export function renderSongItem(
   if (song.isSkipped) {
     const restoreBtn = document.createElement('button');
     restoreBtn.className = 'btn-icon btn-restore';
-    restoreBtn.innerHTML = '↩';
+    restoreBtn.textContent = '↩';
     restoreBtn.title = 'Restore song';
     restoreBtn.onclick = (e) => {
       e.stopPropagation();
@@ -114,7 +114,7 @@ export function renderSongItem(
     if (onDuplicateClick) {
       const dupBtn = document.createElement('button');
       dupBtn.className = 'btn-icon btn-duplicate';
-      dupBtn.innerHTML = '⧉';
+      dupBtn.textContent = '⧉';
       dupBtn.title = 'Duplicate / Repeat song in setlist';
       dupBtn.onclick = (e) => {
         e.stopPropagation();
@@ -126,7 +126,7 @@ export function renderSongItem(
     if (onEditClick) {
       const editBtn = document.createElement('button');
       editBtn.className = 'btn-icon btn-edit';
-      editBtn.innerHTML = '⚙';
+      editBtn.textContent = '⚙';
       editBtn.title = 'Song options';
       editBtn.onclick = (e) => {
         e.stopPropagation();
@@ -137,7 +137,7 @@ export function renderSongItem(
 
     const removeBtn = document.createElement('button');
     removeBtn.className = 'btn-icon btn-remove';
-    removeBtn.innerHTML = '✕';
+    removeBtn.textContent = '✕';
     removeBtn.title = song.isDuplicate ? 'Remove duplicate song' : 'Skip song';
     removeBtn.onclick = (e) => {
       e.stopPropagation();

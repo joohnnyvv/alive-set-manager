@@ -97,7 +97,16 @@ export function renderPerformanceView(store: Store): HTMLElement {
     if (activeSection) {
       const secName = document.createElement('div');
       secName.className = 'active-section-name';
-      secName.innerHTML = `<span class="sec-label">SECTION:</span> <strong>${activeSection.name}</strong>`;
+      
+      const secLabel = document.createElement('span');
+      secLabel.className = 'sec-label';
+      secLabel.textContent = 'SECTION:';
+      
+      const secStrong = document.createElement('strong');
+      secStrong.textContent = ` ${activeSection.name}`;
+      
+      secName.appendChild(secLabel);
+      secName.appendChild(secStrong);
       activeSectionBox.appendChild(secName);
 
       if (activeSection.chords) {
@@ -166,10 +175,17 @@ export function renderPerformanceView(store: Store): HTMLElement {
   // Next Song Preview Card
   const nextSongCard = document.createElement('div');
   nextSongCard.className = 'next-song-card';
-  nextSongCard.innerHTML = `
-    <span class="next-song-label">NEXT:</span>
-    <span class="next-song-name">${nextSong ? nextSong.name : 'End of Set'}</span>
-  `;
+
+  const nextLabel = document.createElement('span');
+  nextLabel.className = 'next-song-label';
+  nextLabel.textContent = 'NEXT:';
+
+  const nextName = document.createElement('span');
+  nextName.className = 'next-song-name';
+  nextName.textContent = nextSong ? nextSong.name : 'End of Set';
+
+  nextSongCard.appendChild(nextLabel);
+  nextSongCard.appendChild(nextName);
   view.appendChild(nextSongCard);
 
   // Transport Controls — pass a getter so clicks always read LIVE state

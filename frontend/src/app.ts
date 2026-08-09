@@ -264,11 +264,19 @@ function updateViewInPlace(viewEl: HTMLElement, state: any) {
     const activeSection = activeSong?.sections.find((sec: any) => sec.id === playback.activeSectionId);
     const secNameEl = activeSectionHero.querySelector('.active-section-name');
     if (secNameEl) {
-      const targetHTML = activeSection
-        ? `<span class="sec-label">SECTION:</span> <strong>${activeSection.name}</strong>`
-        : `<span class="sec-label">SECTION:</span> <strong>—</strong>`;
-      if (secNameEl.innerHTML !== targetHTML) {
-        secNameEl.innerHTML = targetHTML;
+      let secStrong = secNameEl.querySelector('strong');
+      if (!secStrong) {
+        secNameEl.innerHTML = '';
+        const label = document.createElement('span');
+        label.className = 'sec-label';
+        label.textContent = 'SECTION:';
+        secStrong = document.createElement('strong');
+        secNameEl.appendChild(label);
+        secNameEl.appendChild(secStrong);
+      }
+      const targetText = activeSection ? ` ${activeSection.name}` : ' —';
+      if (secStrong.textContent !== targetText) {
+        secStrong.textContent = targetText;
       }
     }
 

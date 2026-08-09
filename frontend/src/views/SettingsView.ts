@@ -190,7 +190,14 @@ export function renderSettingsView(store: Store): HTMLElement {
   const midiDevicesBox = document.createElement('div');
   midiDevicesBox.className = 'midi-devices-info';
   const inputsList = state.midi.inputs.length > 0 ? state.midi.inputs.join(', ') : 'None detected';
-  midiDevicesBox.innerHTML = `<small style="color:var(--text-secondary);">Active Inputs: <strong>${inputsList}</strong></small>`;
+  
+  const devSmall = document.createElement('small');
+  devSmall.style.color = 'var(--text-secondary)';
+  devSmall.appendChild(document.createTextNode('Active Inputs: '));
+  const devStrong = document.createElement('strong');
+  devStrong.textContent = inputsList;
+  devSmall.appendChild(devStrong);
+  midiDevicesBox.appendChild(devSmall);
   midiSection.appendChild(midiDevicesBox);
 
   const mappingsList = document.createElement('div');
@@ -201,7 +208,11 @@ export function renderSettingsView(store: Store): HTMLElement {
   mappingsList.style.marginTop = '10px';
 
   if (!state.midi.mappings || state.midi.mappings.length === 0) {
-    mappingsList.innerHTML = '<div style="color:var(--text-muted); font-size:0.9rem;">No MIDI mappings configured. Click "Add Mapping" above to create one.</div>';
+    const emptyMsg = document.createElement('div');
+    emptyMsg.style.color = 'var(--text-muted)';
+    emptyMsg.style.fontSize = '0.9rem';
+    emptyMsg.textContent = 'No MIDI mappings configured. Click "Add Mapping" above to create one.';
+    mappingsList.appendChild(emptyMsg);
   } else {
     state.midi.mappings.forEach((mapping) => {
       const row = document.createElement('div');
@@ -220,44 +231,62 @@ export function renderSettingsView(store: Store): HTMLElement {
         ? `${mapping.messageType.toUpperCase()} | Ch:${mapping.channel}${noteDetail ? ' | ' + noteDetail : ''}`
         : 'Not learned yet';
 
-      // Build device options
-      const deviceOptions = [
-        `<option value="Any Device" ${!mapping.inputName || mapping.inputName === 'Any Device' ? 'selected' : ''}>🌐 Any Device</option>`
-      ];
+      const infoBox = document.createElement('div');
+      infoBox.style.flex = '1';
+      infoBox.style.minWidth = '0';
+
+      const titleRow = document.createElement('div');
+      titleRow.style.display = 'flex';
+      titleRow.style.alignItems = 'center';
+      titleRow.style.gap = '8px';
+      titleRow.style.marginBottom = '4px';
+
+      const titleStrong = document.createElement('strong');
+      titleStrong.style.color = 'var(--text-primary)';
+      titleStrong.style.fontSize = '0.95rem';
+      titleStrong.textContent = actionText;
+      titleRow.appendChild(titleStrong);
+      infoBox.appendChild(titleRow);
+
+      const detailsRow = document.createElement('div');
+      detailsRow.style.fontSize = '0.8rem';
+      detailsRow.style.color = 'var(--text-secondary)';
+      detailsRow.style.display = 'flex';
+      detailsRow.style.alignItems = 'center';
+      detailsRow.style.gap = '8px';
+      detailsRow.style.flexWrap = 'wrap';
+
+      const deviceSelect = document.createElement('select');
+      deviceSelect.className = 'select-input select-midi-device';
+      deviceSelect.style.padding = '2px 6px';
+      deviceSelect.style.fontSize = '0.75rem';
+      deviceSelect.style.borderRadius = '4px';
+      deviceSelect.style.maxWidth = '200px';
+
+      // Option Any Device
+      const anyOpt = document.createElement('option');
+      anyOpt.value = 'Any Device';
+      anyOpt.textContent = '🌐 Any Device';
+      if (!mapping.inputName || mapping.inputName === 'Any Device') anyOpt.selected = true;
+      deviceSelect.appendChild(anyOpt);
 
       const activeInputs = state.midi.inputs || [];
       activeInputs.forEach(dev => {
-        const isSel = mapping.inputName === dev ? 'selected' : '';
-        deviceOptions.push(`<option value="${dev}" ${isSel}>🔒 ${dev}</option>`);
+        const opt = document.createElement('option');
+        opt.value = dev;
+        opt.textContent = `🔒 ${dev}`;
+        if (mapping.inputName === dev) opt.selected = true;
+        deviceSelect.appendChild(opt);
       });
 
       if (mapping.inputName && mapping.inputName !== 'Any Device' && !activeInputs.includes(mapping.inputName)) {
-        deviceOptions.push(`<option value="${mapping.inputName}" selected>⚠️ ${mapping.inputName} (Offline)</option>`);
+        const offlineOpt = document.createElement('option');
+        offlineOpt.value = mapping.inputName;
+        offlineOpt.textContent = `⚠️ ${mapping.inputName} (Offline)`;
+        offlineOpt.selected = true;
+        deviceSelect.appendChild(offlineOpt);
       }
 
-      row.innerHTML = `
-        <div style="flex:1; min-width:0;">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-            <strong style="color:var(--text-primary); font-size:0.95rem;">${actionText}</strong>
-          </div>
-          <div style="font-size:0.8rem; color:var(--text-secondary); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <select class="select-input select-midi-device" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; max-width:200px;">
-              ${deviceOptions.join('')}
-            </select>
-            <span style="background:var(--bg-tertiary, #2a2a2a); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:0.75rem;">
-              ${midiDetails}
-            </span>
-          </div>
-        </div>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <button class="btn btn-sm ${isLearningThis ? 'btn-primary pulse-anim' : 'btn-secondary'} btn-learn-midi">
-            ${isLearningThis ? '⏳ Listening...' : 'Learn'}
-          </button>
-          <button class="btn-icon btn-remove btn-del-midi" title="Remove Mapping">✕</button>
-        </div>
-      `;
-
-      const deviceSelect = row.querySelector('.select-midi-device') as HTMLSelectElement;
       deviceSelect.onchange = () => {
         const updatedDev = deviceSelect.value;
         store.dispatch({
@@ -267,16 +296,45 @@ export function renderSettingsView(store: Store): HTMLElement {
         showToast(`Locked "${actionText}" to ${updatedDev === 'Any Device' ? 'Any Device' : updatedDev}`, 'success');
       };
 
-      row.querySelector('.btn-learn-midi')!.addEventListener('click', () => {
+      const detailBadge = document.createElement('span');
+      detailBadge.style.background = 'var(--bg-tertiary, #2a2a2a)';
+      detailBadge.style.padding = '2px 6px';
+      detailBadge.style.borderRadius = '4px';
+      detailBadge.style.fontFamily = 'monospace';
+      detailBadge.style.fontSize = '0.75rem';
+      detailBadge.textContent = midiDetails;
+
+      detailsRow.appendChild(deviceSelect);
+      detailsRow.appendChild(detailBadge);
+      infoBox.appendChild(detailsRow);
+
+      const btnGroup = document.createElement('div');
+      btnGroup.style.display = 'flex';
+      btnGroup.style.gap = '8px';
+      btnGroup.style.alignItems = 'center';
+
+      const learnBtn = document.createElement('button');
+      learnBtn.className = `btn btn-sm ${isLearningThis ? 'btn-primary pulse-anim' : 'btn-secondary'} btn-learn-midi`;
+      learnBtn.textContent = isLearningThis ? '⏳ Listening...' : 'Learn';
+      learnBtn.onclick = () => {
         store.dispatch({ type: 'midi.learn', mappingId: mapping.id });
         showToast(`Press any button/pedal for "${actionText}"...`, 'info');
-      });
+      };
 
-      row.querySelector('.btn-del-midi')!.addEventListener('click', () => {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn-icon btn-remove btn-del-midi';
+      delBtn.title = 'Remove Mapping';
+      delBtn.textContent = '✕';
+      delBtn.onclick = () => {
         store.dispatch({ type: 'midi.remove-mapping', mappingId: mapping.id });
         showToast('Removed MIDI mapping', 'info');
-      });
+      };
 
+      btnGroup.appendChild(learnBtn);
+      btnGroup.appendChild(delBtn);
+
+      row.appendChild(infoBox);
+      row.appendChild(btnGroup);
       mappingsList.appendChild(row);
     });
   }
@@ -375,11 +433,22 @@ export function renderSettingsView(store: Store): HTMLElement {
       const mainUrl = `http://${ips[0]}:${port}`;
 
       if (containerEl) {
-        const urls = ips.map((ip: string) => `http://${ip}:${port}`);
-        containerEl.innerHTML = `
-          <span style="color:var(--text-secondary); font-size:0.85rem;">Mobile Wi-Fi Addresses:</span>
-          ${urls.map((u: string) => `<div style="font-size:1.05rem; font-weight:700; color:var(--accent); font-family:monospace;">${u}</div>`).join('')}
-        `;
+        containerEl.innerHTML = '';
+        const titleSpan = document.createElement('span');
+        titleSpan.style.color = 'var(--text-secondary)';
+        titleSpan.style.fontSize = '0.85rem';
+        titleSpan.textContent = 'Mobile Wi-Fi Addresses:';
+        containerEl.appendChild(titleSpan);
+
+        ips.forEach((ip: string) => {
+          const urlDiv = document.createElement('div');
+          urlDiv.style.fontSize = '1.05rem';
+          urlDiv.style.fontWeight = '700';
+          urlDiv.style.color = 'var(--accent)';
+          urlDiv.style.fontFamily = 'monospace';
+          urlDiv.textContent = `http://${ip}:${port}`;
+          containerEl.appendChild(urlDiv);
+        });
       }
 
       if (qrCanvasEl) {

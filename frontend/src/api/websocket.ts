@@ -1,5 +1,6 @@
 import { ServerEvent, ClientAction } from '../types.js';
 import { logWsTx, logWsRx } from '../utils/logger.js';
+import { getBackendPort, getAuthToken } from './http.js';
 
 export class WsClient {
   private ws?: WebSocket;
@@ -21,10 +22,12 @@ export class WsClient {
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     let host = window.location.host;
+    const port = getBackendPort();
     if (!host || window.location.protocol === 'file:' || window.location.port === '5173') {
-      host = 'localhost:8080';
+      host = `localhost:${port}`;
     }
-    const wsUrl = `${protocol}//${host}/ws`;
+    const token = getAuthToken();
+    const wsUrl = `${protocol}//${host}/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 
     logWsTx(`Connecting to ${wsUrl}...`);
     this.ws = new WebSocket(wsUrl);

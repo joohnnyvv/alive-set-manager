@@ -7,7 +7,7 @@ import { SettingsStorage } from '../src/storage/settings.js';
 
 describe('Phase 3 — Jump Modes, Scheduling & Stop Behaviors', () => {
 
-  test('1. Timekeeper lookahead scheduler executes scheduled callbacks accurately', (t, done) => {
+  test('1. Timekeeper lookahead scheduler executes scheduled callbacks accurately', async () => {
     const tk = new Timekeeper();
     tk.start();
     tk.updateTime(10, 120);
@@ -20,11 +20,9 @@ describe('Phase 3 — Jump Modes, Scheduling & Stop Behaviors', () => {
     // Advance timekeeper time
     tk.updateTime(10.06, 120);
 
-    setTimeout(() => {
-      tk.stop();
-      assert.equal(executed, true, 'Scheduled callback should execute when beat time reaches target');
-      done();
-    }, 50);
+    await new Promise(resolve => setTimeout(resolve, 60));
+    tk.stop();
+    assert.equal(executed, true, 'Scheduled callback should execute when beat time reaches target');
   });
 
   test('2. Jump Engine State Machine: IDLE -> QUEUED -> JUMPING -> IDLE', async () => {

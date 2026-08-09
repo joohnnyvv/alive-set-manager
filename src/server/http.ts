@@ -27,6 +27,24 @@ function getLocalIpAddresses(): string[] {
   return ips;
 }
 
+export function isOriginAllowed(origin: string | undefined): boolean {
+  if (!origin || origin === 'null' || origin === 'file://') return true;
+  try {
+    const url = new URL(origin);
+    const hostname = url.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+      return true;
+    }
+    const localIps = getLocalIpAddresses();
+    if (localIps.includes(hostname)) {
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export function createHttpServer(
   setlistEngine: SetlistEngine,
   abletonBridge: AbletonBridge,
@@ -37,8 +55,32 @@ export function createHttpServer(
 ) {
   const app = express();
 
-  app.use(cors());
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (isOriginAllowed(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Cross-origin request blocked by security policy'));
+        }
+      },
+      credentials: true,
+    })
+  );
   app.use(express.json());
+
+  // Optional Token Authentication for API routes
+  app.use('/api', (req: Request, res: Response, next) => {
+    const settings = settingsStorage.getSettings();
+    if (settings.authToken) {
+      const token = req.headers['x-auth-token'] || req.query.token;
+      if (token !== settings.authToken) {
+        res.status(401).json({ error: 'Unauthorized: Invalid or missing auth token' });
+        return;
+      }
+    }
+    next();
+  });
 
   // Static files for production build (supports local dev, node dist, packaged Electron .app, and asarUnpack)
   const baseDir = __dirname.includes('app.asar.unpacked')
@@ -99,24 +141,24 @@ export function createHttpServer(
 
   app.post('/api/setlist/save', async (req: Request, res: Response) => {
     const { name } = req.body;
-    if (!name) {
-      res.status(400).json({ error: 'Name is required' });
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      res.status(400).json({ error: 'Valid setlist name is required' });
       return;
     }
     const setlist = setlistEngine.getSetlistState();
-    await setlistStorage.save(name, setlist.order);
-    res.json({ success: true, name });
+    await setlistStorage.save(name.trim(), setlist.order);
+    res.json({ success: true, name: name.trim() });
   });
 
   app.post('/api/setlist/load', async (req: Request, res: Response) => {
     const { name } = req.body;
-    if (!name) {
+    if (!name || typeof name !== 'string') {
       res.status(400).json({ error: 'Name is required' });
       return;
     }
     const loaded = await setlistStorage.load(name);
     if (!loaded) {
-      res.status(444).json({ error: 'Setlist not found' });
+      res.status(404).json({ error: 'Setlist not found' });
       return;
     }
     setlistEngine.reorder(loaded.order);
@@ -143,11 +185,12 @@ export function createHttpServer(
   });
 
   app.post('/api/settings', async (req: Request, res: Response) => {
-    const newSettings = req.body;
-    for (const [key, val] of Object.entries(newSettings)) {
-      await settingsStorage.updateSetting(key as any, val);
+    try {
+      const updated = await settingsStorage.updateSettings(req.body);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message || 'Invalid settings payload' });
     }
-    res.json(settingsStorage.getSettings());
   });
 
   app.get('/api/midi/devices', (req: Request, res: Response) => {
@@ -162,6 +205,12 @@ export function createHttpServer(
 
   app.post('/api/midi/mappings', async (req: Request, res: Response) => {
     if (midiEngine && Array.isArray(req.body)) {
+      // Validate mapping objects
+      const valid = req.body.every(m => m && typeof m === 'object' && typeof m.id === 'string' && m.action && typeof m.action.type === 'string');
+      if (!valid) {
+        res.status(400).json({ error: 'Invalid mappings structure' });
+        return;
+      }
       await midiEngine.setMappings(req.body);
       res.json({ success: true, mappings: midiEngine.getMappings() });
     } else {

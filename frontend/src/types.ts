@@ -36,6 +36,7 @@ export interface Song {
   startTime: number;
   endTime: number;
   duration: number;
+  durationOverride?: number;
   targetTempo?: number;
   color?: string;
   tags: string[];
@@ -90,6 +91,8 @@ export interface AppSettings {
   defaultView: 'setlist' | 'performance' | 'sections';
   show24HourClock: boolean;
   preferredPort: number;
+  lanMode?: boolean;
+  authToken?: string;
 }
 
 export type MidiMessageType = 'note-on' | 'note-off' | 'cc' | 'pc';

@@ -123,81 +123,82 @@ async function main() {
 
   // 6. Ticker loop (~20 times/sec when playing) for playback ticks and song-end monitoring
   let lastHandledSongEndId: string | null = null;
+  let isTickInFlight = false;
 
   setInterval(async () => {
-    const time = abletonBridge.getCurrentSongTime();
-    const tempo = abletonBridge.getTempo();
-    timekeeper.updateTime(time, tempo);
+    if (isTickInFlight) return;
+    isTickInFlight = true;
 
-    if (abletonBridge.isPlaying()) {
-      const state = playbackTracker.getPlaybackState();
-      wsServer.broadcast({
-        type: 'playback.tick',
-        payload: {
-          currentTime: state.currentTime,
-          isPlaying: state.isPlaying,
-          tempo: state.tempo,
-          songProgress: state.songProgress,
-          sectionProgress: state.sectionProgress,
-          remainingTimeInSong: state.remainingTimeInSong,
-        },
-      });
+    try {
+      const time = abletonBridge.getCurrentSongTime();
+      const tempo = abletonBridge.getTempo();
+      timekeeper.updateTime(time, tempo);
 
-      // Song end boundary detection & auto-jump/stop behavior
-      const active = setlistEngine.getActiveSongAndSection(time);
-      if (active.song) {
-        if (lastHandledSongEndId === active.song.id && time < active.song.endTime - 2) {
-          // Reset handled guard if user jumped back earlier into song
-          lastHandledSongEndId = null;
-        }
+      if (abletonBridge.isPlaying()) {
+        const state = playbackTracker.getPlaybackState();
+        wsServer.broadcast({
+          type: 'playback.tick',
+          payload: {
+            currentTime: state.currentTime,
+            isPlaying: state.isPlaying,
+            tempo: state.tempo,
+            songProgress: state.songProgress,
+            sectionProgress: state.sectionProgress,
+            remainingTimeInSong: state.remainingTimeInSong,
+          },
+        });
 
-        if (time >= active.song.endTime - 0.2 && lastHandledSongEndId !== active.song.id) {
-          lastHandledSongEndId = active.song.id;
-          const settings = settingsStorage.getSettings();
-          const stopBehavior = active.song.stopBehavior || 'default';
-          logInfo('SongEnd', `Song "${active.song.name}" reached end at beat ${time.toFixed(2)} (stopBehavior: ${stopBehavior})`);
+        // Song end boundary detection & auto-jump/stop behavior
+        const active = setlistEngine.getActiveSongAndSection(time);
+        if (active.song) {
+          if (lastHandledSongEndId === active.song.id && time < active.song.endTime - 2) {
+            // Reset handled guard if user jumped back earlier into song
+            lastHandledSongEndId = null;
+          }
 
-          if (stopBehavior === 'stop' || settings.alwaysStopOnSongEnd) {
-            logInfo('SongEnd', `Action: Stopping playback`);
-            await abletonBridge.safeStop();
-          } else if (stopBehavior === 'pause') {
-            logInfo('SongEnd', `Action: Pausing playback`);
-            await abletonBridge.pause();
-          } else {
-            const setlist = setlistEngine.getSetlistState();
-            const activeIdx = setlist.songs.findIndex(s => s.id === active.song!.id);
-            const nextSong = setlist.songs.slice(activeIdx + 1).find(s => !s.isSkipped);
+          if (time >= active.song.endTime - 0.2 && lastHandledSongEndId !== active.song.id) {
+            lastHandledSongEndId = active.song.id;
+            const settings = settingsStorage.getSettings();
+            const stopBehavior = active.song.stopBehavior || 'default';
+            logInfo('SongEnd', `Song "${active.song.name}" reached end at beat ${time.toFixed(2)} (stopBehavior: ${stopBehavior})`);
 
-            if (nextSong) {
-              logInfo('SongEnd', `Action: Auto-jumping to next song "${nextSong.name}"`);
-              await jumpEngine.executeSongJump(nextSong);
-            } else {
-              logInfo('SongEnd', `Action: End of setlist reached. Stopping playback`);
+            if (stopBehavior === 'stop' || settings.alwaysStopOnSongEnd) {
+              logInfo('SongEnd', `Action: Stopping playback`);
               await abletonBridge.safeStop();
+            } else if (stopBehavior === 'pause') {
+              logInfo('SongEnd', `Action: Pausing playback`);
+              await abletonBridge.pause();
+            } else {
+              const setlist = setlistEngine.getSetlistState();
+              const activeIdx = setlist.songs.findIndex(s => s.id === active.song!.id);
+              const nextSong = setlist.songs.slice(activeIdx + 1).find(s => !s.isSkipped);
+
+              if (nextSong) {
+                logInfo('SongEnd', `Action: Auto-jumping to next song "${nextSong.name}"`);
+                await jumpEngine.executeSongJump(nextSong);
+              } else {
+                logInfo('SongEnd', `Action: End of setlist reached. Stopping playback`);
+                await abletonBridge.safeStop();
+              }
             }
           }
         }
       }
+    } catch (err) {
+      console.error('[Tick] Error in playback loop:', err);
+    } finally {
+      isTickInFlight = false;
     }
   }, 50);
 
   // 7. Start listening on port
   const settings = settingsStorage.getSettings();
   let port = settings.preferredPort || 8080;
+  const host = settings.lanMode ? '0.0.0.0' : '127.0.0.1';
 
   return new Promise<number>((resolve, reject) => {
     const startServerOnPort = (p: number) => {
-      server.listen(p, () => {
-        const ips = getLocalIpAddresses();
-        console.log(`\n==================================================`);
-        console.log(` Alive Set Manager Server running on port ${p}`);
-        console.log(` Local access: http://localhost:${p}`);
-        ips.forEach(ip => console.log(` Mobile access: http://${ip}:${p}`));
-        console.log(`==================================================\n`);
-        resolve(p);
-      });
-
-      server.on('error', (err: any) => {
+      const onError = (err: any) => {
         if (err.code === 'EADDRINUSE') {
           console.warn(`Port ${p} is in use, trying port ${p + 1}...`);
           startServerOnPort(p + 1);
@@ -205,6 +206,23 @@ async function main() {
           console.error('Server listen error:', err);
           reject(err);
         }
+      };
+
+      server.once('error', onError);
+
+      server.listen(p, host, () => {
+        server.removeListener('error', onError);
+        const ips = getLocalIpAddresses();
+        console.log(`\n==================================================`);
+        console.log(` Alive Set Manager Server running on port ${p} (${settings.lanMode ? 'LAN Mode' : 'Localhost Only'})`);
+        console.log(` Local access: http://localhost:${p}`);
+        if (settings.lanMode) {
+          ips.forEach(ip => console.log(` Mobile access: http://${ip}:${p}`));
+        } else {
+          console.log(` (LAN access disabled. Enable in settings for stage mobile access)`);
+        }
+        console.log(`==================================================\n`);
+        resolve(p);
       });
     };
 

@@ -36,6 +36,7 @@ describe('Phase 5 — MIDI Mapping & GO Button Logic', () => {
     await engine1.addMapping(mapping);
     assert.equal(engine1.getMappings().length, 1);
     assert.equal(engine1.getMappings()[0].id, 'm1');
+    engine1.close();
 
     // Simulate closing the app and restarting a new instance
     const engine2 = new MidiEngine(() => {}, undefined, testStorageFile);
@@ -49,10 +50,12 @@ describe('Phase 5 — MIDI Mapping & GO Button Logic', () => {
     // Remove mapping and verify deletion persists
     await engine2.removeMapping('m1');
     assert.equal(engine2.getMappings().length, 0);
+    engine2.close();
 
     const engine3 = new MidiEngine(() => {}, undefined, testStorageFile);
     await engine3.init();
     assert.equal(engine3.getMappings().length, 0, 'Removal of mapping must persist after restart');
+    engine3.close();
 
     // Clean up test file
     try {
@@ -76,6 +79,7 @@ describe('Phase 5 — MIDI Mapping & GO Button Logic', () => {
     assert.equal(engine.getMappings()[0].id, 'learn-test-1');
 
     engine.cancelLearn();
+    engine.close();
 
     try {
       await fs.unlink(testStorageFile);

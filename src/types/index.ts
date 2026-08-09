@@ -53,6 +53,7 @@ export interface Song {
   startTime: number;       // Position in beats
   endTime: number;         // Position in beats
   duration: number;        // Duration in seconds
+  durationOverride?: number; // Manual override in seconds
   targetTempo?: number;    // Target BPM parsed from metadata
   color?: string;          // Color name
   tags: string[];          // Parsed from #hashtags
@@ -107,6 +108,8 @@ export interface AppSettings {
   defaultView: 'setlist' | 'performance' | 'sections';
   show24HourClock: boolean;
   preferredPort: number;
+  lanMode?: boolean;
+  authToken?: string;
 }
 
 export type MidiMessageType = 'note-on' | 'note-off' | 'cc' | 'pc';

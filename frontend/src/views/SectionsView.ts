@@ -16,10 +16,17 @@ export function renderSectionsView(store: Store): HTMLElement {
   header.className = 'view-header';
 
   const titleBox = document.createElement('div');
-  titleBox.innerHTML = `
-    <h2 class="view-title">Song Sections</h2>
-    <div class="subtitle">${activeSong ? activeSong.name : 'No active song'}</div>
-  `;
+  
+  const titleEl = document.createElement('h2');
+  titleEl.className = 'view-title';
+  titleEl.textContent = 'Song Sections';
+
+  const subtitleEl = document.createElement('div');
+  subtitleEl.className = 'subtitle';
+  subtitleEl.textContent = activeSong ? activeSong.name : 'No active song';
+
+  titleBox.appendChild(titleEl);
+  titleBox.appendChild(subtitleEl);
 
   header.appendChild(titleBox);
   view.appendChild(header);

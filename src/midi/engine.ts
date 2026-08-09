@@ -44,6 +44,17 @@ export class MidiEngine {
     }
   }
 
+  public close(): void {
+    for (const [name, input] of this.inputs.entries()) {
+      try {
+        input.close();
+      } catch (err) {
+        console.warn(`[MidiEngine] Error closing input ${name}:`, err);
+      }
+    }
+    this.inputs.clear();
+  }
+
   public refreshDevices(): void {
     try {
       const availableInputs = easymidi.getInputs();
@@ -80,7 +91,7 @@ export class MidiEngine {
       const channel = (msg.channel || 0) + 1;
       const note = msg.note;
       const cc = msg.controller;
-      const value = msg.value;
+      const value = msg.value !== undefined ? msg.value : (msg.velocity !== undefined ? msg.velocity : msg.number);
 
       if (this.isLearning && this.learningMappingId) {
         const targetMapping = this.mappings.find(m => m.id === this.learningMappingId);
@@ -90,7 +101,8 @@ export class MidiEngine {
           targetMapping.channel = channel;
           targetMapping.note = note;
           targetMapping.cc = cc;
-          targetMapping.value = value;
+          // For notes, velocity is dynamic, so keep value undefined for "any velocity"; for CC/PC user can override
+          targetMapping.value = undefined;
           this.saveMappings().catch(err => {
             console.error('[MidiEngine] Failed to save learned mapping:', err);
           });
@@ -121,6 +133,9 @@ export class MidiEngine {
         } else if (messageType === 'pc') {
           if (mapping.note !== undefined && mapping.note !== note) continue;
         }
+
+        // Value-specific match check (when mapping.value is defined, require exact match)
+        if (mapping.value !== undefined && mapping.value !== value) continue;
 
         // Trigger action
         this.onActionTriggered(mapping.action);
@@ -201,7 +216,7 @@ export class MidiEngine {
       } catch {
         // Fallback to legacy process.cwd()/midi-mappings.json if primary does not exist
         const legacyPath = path.join(process.cwd(), 'midi-mappings.json');
-        if (this.storageFilePath !== legacyPath) {
+        if (this.storageFilePath === getDefaultMidiFilePath()) {
           try {
             data = await fs.readFile(legacyPath, 'utf-8');
             // Migrate to persistent primary file

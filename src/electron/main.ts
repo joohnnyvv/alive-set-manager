@@ -59,10 +59,12 @@ async function createWindow() {
 
   if (process.env.VITE_DEV_SERVER_URL) {
     console.log(`[Electron] Loading UI from dev server at ${process.env.VITE_DEV_SERVER_URL}...`);
-    await mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+    const devUrl = new URL(process.env.VITE_DEV_SERVER_URL);
+    devUrl.searchParams.set('backendPort', String(port));
+    await mainWindow.loadURL(devUrl.toString());
   } else if (indexPath) {
-    console.log(`[Electron] Loading UI from local file: ${indexPath}`);
-    await mainWindow.loadFile(indexPath);
+    console.log(`[Electron] Loading UI from local file: ${indexPath} (backendPort=${port})`);
+    await mainWindow.loadFile(indexPath, { query: { backendPort: String(port) } });
   } else {
     console.log(`[Electron] Loading UI from http://localhost:${port}...`);
     await mainWindow.loadURL(`http://localhost:${port}`);

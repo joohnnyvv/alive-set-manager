@@ -40,7 +40,12 @@ export class Timekeeper {
       if (event.beatTime <= current + aheadBeats && !event.triggered) {
         event.triggered = true;
         try {
-          event.callback();
+          const result = event.callback();
+          if (result && typeof (result as any).catch === 'function') {
+            (result as Promise<void>).catch((err) => {
+              console.error(`[Timekeeper] Async error executing event ${event.id}:`, err);
+            });
+          }
         } catch (err) {
           console.error(`[Timekeeper] Error executing event ${event.id}:`, err);
         }
