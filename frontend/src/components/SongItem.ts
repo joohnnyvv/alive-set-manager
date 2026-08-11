@@ -33,7 +33,7 @@ export function renderSongItem(
   dragHandle.textContent = '⋮⋮';
   dragHandle.title = 'Drag to reorder';
 
-  // Number & Title
+  // Title Box
   const titleBox = document.createElement('div');
   titleBox.className = 'song-title-box';
 
@@ -45,22 +45,23 @@ export function renderSongItem(
   songName.className = 'song-name';
   songName.textContent = song.name;
 
+  titleBox.appendChild(dragHandle);
   titleBox.appendChild(songNum);
   titleBox.appendChild(songName);
 
-  // Stop Mode Badge
-  const stopBadge = document.createElement('span');
+  // Stop Mode Badge (Compact & Understated)
   const behavior = song.stopBehavior || 'default';
-  const labelMap: Record<string, string> = {
-    'stop': '⏹ STOP',
-    'pause': '⏸ PAUSE',
-    'auto-jump': '⏭ AUTO',
-    'default': '⏭ AUTO',
-  };
-  stopBadge.className = `stop-mode-badge stop-mode-${behavior}`;
-  stopBadge.textContent = labelMap[behavior] || '⏭ AUTO';
-  stopBadge.title = `Stop mode at song end: ${behavior}`;
-  titleBox.appendChild(stopBadge);
+  if (behavior !== 'default' && behavior !== 'auto-jump') {
+    const stopBadge = document.createElement('span');
+    const labelMap: Record<string, string> = {
+      'stop': '⏹ STOP',
+      'pause': '⏸ PAUSE',
+    };
+    stopBadge.className = `stop-mode-badge stop-mode-${behavior}`;
+    stopBadge.textContent = labelMap[behavior] || behavior.toUpperCase();
+    stopBadge.title = `Stop mode at song end: ${behavior}`;
+    titleBox.appendChild(stopBadge);
+  }
 
   // Repeat Badge for duplicated songs
   if (song.isDuplicate) {
@@ -91,7 +92,7 @@ export function renderSongItem(
     titleBox.appendChild(tagsBox);
   }
 
-  // Right side: duration & action button
+  // Right side: duration & action buttons
   const rightBox = document.createElement('div');
   rightBox.className = 'song-right';
 
@@ -146,7 +147,6 @@ export function renderSongItem(
     rightBox.appendChild(removeBtn);
   }
 
-  header.appendChild(dragHandle);
   header.appendChild(titleBox);
   header.appendChild(rightBox);
 

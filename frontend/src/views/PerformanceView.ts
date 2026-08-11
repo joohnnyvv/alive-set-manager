@@ -70,7 +70,7 @@ export function renderPerformanceView(store: Store): HTMLElement {
 
   if (activeSong) {
     const colorHex = getCssColor(activeSong.color);
-    nowPlayingCard.style.borderLeft = `8px solid ${colorHex}`;
+    nowPlayingCard.style.borderLeft = `4px solid ${colorHex}`;
 
     const label = document.createElement('div');
     label.className = 'now-playing-label';
