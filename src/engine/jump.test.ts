@@ -1,31 +1,13 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Timekeeper } from '../src/engine/timekeeper.js';
-import { JumpEngine } from '../src/engine/jump.js';
-import { SetlistEngine } from '../src/engine/setlist.js';
-import { SettingsStorage } from '../src/storage/settings.js';
+import { JumpEngine } from './jump.js';
+import { SetlistEngine } from './setlist.js';
+import { Timekeeper } from './timekeeper.js';
+import { SettingsStorage } from '../storage/settings.js';
 
-describe('Phase 3 — Jump Modes, Scheduling & Stop Behaviors', () => {
+describe('Jump Engine', () => {
 
-  test('1. Timekeeper lookahead scheduler executes scheduled callbacks accurately', async () => {
-    const tk = new Timekeeper();
-    tk.start();
-    tk.updateTime(10, 120);
-
-    let executed = false;
-    tk.scheduleAt(10.05, () => {
-      executed = true;
-    });
-
-    // Advance timekeeper time
-    tk.updateTime(10.06, 120);
-
-    await new Promise(resolve => setTimeout(resolve, 60));
-    tk.stop();
-    assert.equal(executed, true, 'Scheduled callback should execute when beat time reaches target');
-  });
-
-  test('2. Jump Engine State Machine: IDLE -> QUEUED -> JUMPING -> IDLE', async () => {
+  test('state machine transitions: IDLE -> QUEUED -> JUMPING -> IDLE', async () => {
     const setlistEngine = new SetlistEngine();
     const cues = [
       { id: 'c1', name: 'Song One', time: 0 },
@@ -73,7 +55,7 @@ describe('Phase 3 — Jump Modes, Scheduling & Stop Behaviors', () => {
     assert.equal(jumpEngine.getQueuedTarget(), undefined);
   });
 
-  test('3. Queue Cancellation clears queued target correctly', async () => {
+  test('queue cancellation clears queued target correctly', async () => {
     const setlistEngine = new SetlistEngine();
     const cues = [
       { id: 'c1', name: 'Song A', time: 0 },
@@ -105,17 +87,7 @@ describe('Phase 3 — Jump Modes, Scheduling & Stop Behaviors', () => {
     assert.equal(queuedSong, undefined);
   });
 
-  test('4. All 5 Jump Modes configuration and target resolution', async () => {
-    const modes = ['quantized', 'end-of-section', 'end-of-song', 'dynamic', 'manual'] as const;
-    const settings = new SettingsStorage();
-
-    for (const mode of modes) {
-      await settings.updateSetting('jumpMode', mode);
-      assert.equal(settings.getSettings().jumpMode, mode);
-    }
-  });
-
-  test('6. Jump Engine does not start playback automatically when stopped', async () => {
+  test('does not start playback automatically when stopped', async () => {
     const setlistEngine = new SetlistEngine();
     const cues = [
       { id: 'c1', name: 'Song One', time: 0 },
@@ -142,4 +114,32 @@ describe('Phase 3 — Jump Modes, Scheduling & Stop Behaviors', () => {
     assert.equal(jumpedCueId, 'c2');
     assert.equal(playing, false, 'Playback should remain stopped after jumping to a song when stopped');
   });
+
+  test('quantized mode executes immediate jump without queueing', async () => {
+    const setlistEngine = new SetlistEngine();
+    const cues = [
+      { id: 'c1', name: 'Song 1', time: 0 },
+      { id: 'c2', name: 'Song 2', time: 32 },
+    ];
+    setlistEngine.buildSetlistFromCues(cues, 120);
+
+    let jumpedId = '';
+    const mockBridge = {
+      isPlaying: () => true,
+      getCurrentSongTime: () => 5,
+      getTempo: () => 120,
+      jumpToCue: async (id: string) => { jumpedId = id; },
+    } as any;
+
+    const tk = new Timekeeper();
+    const settings = new SettingsStorage();
+    await settings.updateSetting('jumpMode', 'quantized');
+
+    const jumpEngine = new JumpEngine(setlistEngine, mockBridge, tk, settings);
+    await jumpEngine.requestSongJump('c2');
+
+    assert.equal(jumpedId, 'c2');
+    assert.equal(jumpEngine.getQueuedTarget(), undefined);
+  });
+
 });

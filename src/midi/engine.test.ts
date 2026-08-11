@@ -2,12 +2,12 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { MidiEngine } from '../src/midi/engine.js';
-import { MidiMapping } from '../src/types/index.js';
+import { MidiEngine } from './engine.js';
+import { MidiMapping } from '../types/index.js';
 
-describe('Phase 5 — MIDI Mapping & GO Button Logic', () => {
+describe('MIDI Engine', () => {
 
-  test('1. MIDI Engine Device Discovery & Mapping Persistence across restarts', async () => {
+  test('device discovery & mapping persistence across restarts', async () => {
     const testStorageFile = path.join(process.cwd(), 'scratch', 'test-midi-mappings.json');
     try {
       await fs.unlink(testStorageFile);
@@ -63,7 +63,7 @@ describe('Phase 5 — MIDI Mapping & GO Button Logic', () => {
     } catch {}
   });
 
-  test('2. MIDI Learn mode state handling', async () => {
+  test('MIDI Learn mode state handling', async () => {
     const testStorageFile = path.join(process.cwd(), 'scratch', 'test-midi-learn.json');
     const engine = new MidiEngine(() => {}, undefined, testStorageFile);
     const mapping: MidiMapping = {
@@ -86,7 +86,67 @@ describe('Phase 5 — MIDI Mapping & GO Button Logic', () => {
     } catch {}
   });
 
-  test('3. Smart GO Button Logic Matrix', async () => {
+  test('enforces exact value matching when mapping.value is defined', async () => {
+    const testStorageFile = path.join(process.cwd(), 'scratch', 'test-midi-val-check.json');
+    try { await fs.unlink(testStorageFile); } catch {}
+
+    const triggeredActions: any[] = [];
+    const engine = new MidiEngine(action => {
+      triggeredActions.push(action);
+    }, undefined, testStorageFile);
+
+    await engine.init();
+
+    const valueSpecificMapping: MidiMapping = {
+      id: 'cc-exact',
+      inputName: 'Any Device',
+      messageType: 'cc',
+      channel: 1,
+      cc: 64,
+      value: 127,
+      action: { type: 'play' },
+    };
+
+    const anyValueMapping: MidiMapping = {
+      id: 'cc-any',
+      inputName: 'Any Device',
+      messageType: 'cc',
+      channel: 1,
+      cc: 65,
+      action: { type: 'stop' },
+    };
+
+    await engine.addMapping(valueSpecificMapping);
+    await engine.addMapping(anyValueMapping);
+
+    // Simulate input listener message handler
+    let registeredCcHandler: ((msg: any) => void) | undefined;
+    const mockInput = {
+      on: (evt: string, handler: any) => {
+        if (evt === 'cc') registeredCcHandler = handler;
+      },
+    };
+
+    (engine as any).setupInputListeners('Test Device', mockInput);
+    assert.ok(registeredCcHandler);
+
+    // Send CC 64 with value 0 (should NOT trigger action because mapping.value is 127)
+    registeredCcHandler!({ controller: 64, value: 0, channel: 0 });
+    assert.equal(triggeredActions.length, 0, 'CC with non-matching value must not trigger');
+
+    // Send CC 64 with value 127 (SHOULD trigger action)
+    registeredCcHandler!({ controller: 64, value: 127, channel: 0 });
+    assert.equal(triggeredActions.length, 1);
+    assert.equal(triggeredActions[0].type, 'play');
+
+    // Send CC 65 with value 42 (SHOULD trigger because value is undefined in mapping)
+    registeredCcHandler!({ controller: 65, value: 42, channel: 0 });
+    assert.equal(triggeredActions[1].type, 'stop');
+    engine.close();
+    try { await fs.unlink(testStorageFile); } catch {}
+  });
+
+  test('smart GO button decision logic matrix', () => {
     // Scenario 1: Stopped inside song -> Play
     let playCalled = false;
     let loopEscaped = false;
