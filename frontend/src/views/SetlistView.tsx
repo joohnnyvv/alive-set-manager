@@ -192,19 +192,18 @@ export default function SetlistView() {
                         </div>
                         <button
                           class="btn btn-sm btn-primary"
+                          disabled={!song.isSkipped}
                           onClick={() => {
                             if (song.isSkipped) {
                               dispatch({ type: 'setlist.restore-song', songId: song.id });
                               showToast(`Restored "${song.name}" to setlist`, 'success');
                             } else {
-                              const newOrder = [...store.setlist.order, song.id];
-                              dispatch({ type: 'setlist.reorder', order: newOrder });
-                              showToast(`Added "${song.name}" to setlist`, 'success');
+                              showToast(`"${song.name}" is already in the setlist`, 'info');
                             }
                             setShowAddModal(false);
                           }}
                         >
-                          {song.isSkipped ? 'Restore' : 'Add'}
+                          {song.isSkipped ? 'Restore' : 'In Setlist'}
                         </button>
                       </div>
                     )}

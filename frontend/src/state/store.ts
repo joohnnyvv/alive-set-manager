@@ -53,6 +53,8 @@ const initialState: AppState = {
   currentView: 'setlist',
 };
 
+let receivedInitialState = false;
+
 export const [store, setStore] = createStore<AppState>(initialState);
 export const [connection, setConnection] = createSignal<'connected' | 'disconnected' | 'connecting'>('connecting');
 
@@ -64,6 +66,9 @@ const handleMessage = (event: ServerEvent) => {
       if (payload.playback) setStore('playback', reconcile(payload.playback));
       if (payload.settings) {
         setStore('settings', reconcile(payload.settings));
+        if (!receivedInitialState && payload.settings.defaultView) {
+          setStore('currentView', payload.settings.defaultView);
+        }
         if (payload.settings.theme) {
           applyTheme(payload.settings.theme);
         }
@@ -73,6 +78,7 @@ const handleMessage = (event: ServerEvent) => {
         setStore('midi', 'outputs', payload.midi.outputs || []);
         setStore('midi', 'mappings', payload.midi.mappings || []);
       }
+      receivedInitialState = true;
       break;
     }
     case 'playback.tick': {

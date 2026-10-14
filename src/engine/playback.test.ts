@@ -12,6 +12,7 @@ describe('Playback Tracker', () => {
 
     const mockBridge = {
       isPlaying: () => isPlayingVal,
+      isLooping: () => false,
       getCurrentSongTime: () => currentTimeVal,
       getTempo: () => tempoVal,
     } as any;
@@ -40,6 +41,7 @@ describe('Playback Tracker', () => {
     let currentTimeVal = 0;
     const mockBridge = {
       isPlaying: () => true,
+      isLooping: () => false,
       getCurrentSongTime: () => currentTimeVal,
       getTempo: () => 120,
     } as any;
@@ -82,6 +84,7 @@ describe('Playback Tracker', () => {
   test('detects paused state correctly when stopped but playhead > 0', () => {
     const mockBridge = {
       isPlaying: () => false,
+      isLooping: () => false,
       getCurrentSongTime: () => 10,
       getTempo: () => 120,
     } as any;

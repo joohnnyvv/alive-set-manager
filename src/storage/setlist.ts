@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { StopBehavior } from '../types/index.js';
 
 function getSetlistsDir(): string {
   return path.join(os.homedir(), '.ableset', 'setlists');
@@ -11,7 +12,7 @@ export interface SavedSetlistFile {
   name: string;
   createdAt: string;
   order: string[];
-  songOverrides?: Record<string, { color?: string; stopBehavior?: string }>;
+  songOverrides?: Record<string, { color?: string; stopBehavior?: StopBehavior; duration?: number }>;
 }
 
 export class SetlistStorage {

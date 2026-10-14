@@ -66,7 +66,7 @@ export class PlaybackTracker {
       queuedSectionId: setlistState.queuedSectionId,
       songProgress,
       sectionProgress,
-      isLooping: active.section?.flags.loop || false,
+      isLooping: this.abletonBridge.isLooping(),
       isCountingIn: false,
       remainingTimeInSong,
       remainingTimeInSet: setlistState.remainingTime,

@@ -92,7 +92,10 @@ async function main() {
     }
   });
 
-  abletonBridge.onIsPlayingChanged(() => {
+  abletonBridge.onIsPlayingChanged((playing) => {
+    if (!playing && settingsStorage.getSettings().jumpMode === 'manual' && jumpEngine.getQueuedTarget()) {
+      void jumpEngine.executeQueuedNow();
+    }
     if (wsServer) {
       wsServer.broadcastFullState();
     }
@@ -123,6 +126,12 @@ async function main() {
 
   // 6. Ticker loop (~20 times/sec when playing) for playback ticks and song-end monitoring
   let lastHandledSongEndId: string | null = null;
+  let lastHandledSectionActionId: string | null = null;
+  let lastHandledTransitionId: string | null = null;
+  let transitionScheduleId: string | undefined;
+  let loopSectionId: string | null = null;
+  let previousPlaybackTime = 0;
+  let loopPasses = 0;
   let isTickInFlight = false;
 
   setInterval(async () => {
@@ -150,6 +159,44 @@ async function main() {
 
         // Song end boundary detection & auto-jump/stop behavior
         const active = setlistEngine.getActiveSongAndSection(time);
+        const section = active.section;
+        if (section?.id !== lastHandledSectionActionId) {
+          lastHandledSectionActionId = section?.id || null;
+          if (transitionScheduleId) {
+            timekeeper.cancelEvent(transitionScheduleId);
+            transitionScheduleId = undefined;
+          }
+          if (section?.id !== lastHandledTransitionId) lastHandledTransitionId = null;
+          loopPasses = 0;
+          if (section?.flags.pause) {
+            await abletonBridge.pause();
+          } else if (section?.flags.loop) {
+            loopSectionId = section.id;
+            await abletonBridge.setLoop(true, section.startTime, section.endTime - section.startTime);
+          } else if (loopSectionId) {
+            loopSectionId = null;
+            await abletonBridge.setLoop(false);
+          }
+          if (section?.transitionTarget && active.song) {
+            const targetSection = active.song.sections.find(candidate => candidate.name.toLowerCase() === section.transitionTarget!.toLowerCase());
+            if (targetSection) {
+              const sourceSectionId = section.id;
+              transitionScheduleId = timekeeper.scheduleAt(Math.max(time, section.endTime - 0.08), async () => {
+                if (lastHandledTransitionId === sourceSectionId) return;
+                lastHandledTransitionId = sourceSectionId;
+                await jumpEngine.executeSectionJump(targetSection);
+              });
+            }
+          }
+        }
+        if (section?.flags.loop && section.id === loopSectionId && time < previousPlaybackTime - 1) {
+          loopPasses++;
+          if (section.flags.loopCount && loopPasses >= section.flags.loopCount) {
+            loopSectionId = null;
+            await abletonBridge.setLoop(false);
+          }
+        }
+        previousPlaybackTime = time;
         if (active.song) {
           if (lastHandledSongEndId === active.song.id && time < active.song.endTime - 2) {
             // Reset handled guard if user jumped back earlier into song
@@ -162,7 +209,7 @@ async function main() {
             const stopBehavior = active.song.stopBehavior || 'default';
             logInfo('SongEnd', `Song "${active.song.name}" reached end at beat ${time.toFixed(2)} (stopBehavior: ${stopBehavior})`);
 
-            if (stopBehavior === 'stop' || settings.alwaysStopOnSongEnd) {
+            if (stopBehavior === 'stop' || settings.alwaysStopOnSongEnd || (stopBehavior === 'default' && !settings.autoJumpToNextSong)) {
               logInfo('SongEnd', `Action: Stopping playback`);
               await abletonBridge.safeStop();
             } else if (stopBehavior === 'pause') {

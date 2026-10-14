@@ -287,9 +287,9 @@ export class SetlistEngine {
   }
 
   public reorder(newOrder: string[]): void {
-    // Filter to only valid song IDs
+    // Keep only valid IDs and avoid duplicate rows from stale clients/imports.
     const validIds = new Set(this.songs.map(s => s.id));
-    this.order = newOrder.filter(id => validIds.has(id));
+    this.order = [...new Set(newOrder.filter(id => validIds.has(id)))];
   }
 
   public removeSong(songId: string): void {
@@ -374,6 +374,22 @@ export class SetlistEngine {
         song.duration = overrides.duration;
         song.durationOverride = overrides.duration;
       }
+    }
+  }
+
+  public getSongOverrides(): Record<string, { color?: string; stopBehavior?: StopBehavior; duration?: number }> {
+    return Object.fromEntries(this.songs
+      .filter(song => song.color !== undefined || song.stopBehavior !== 'default' || song.durationOverride !== undefined)
+      .map(song => [song.id, {
+        color: song.color,
+        stopBehavior: song.stopBehavior,
+        duration: song.durationOverride,
+      }]));
+  }
+
+  public applySongOverrides(overrides: Record<string, { color?: string; stopBehavior?: StopBehavior; duration?: number }> = {}): void {
+    for (const [songId, values] of Object.entries(overrides)) {
+      this.updateSongOverride(songId, values);
     }
   }
 

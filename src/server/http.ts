@@ -146,7 +146,7 @@ export function createHttpServer(
       return;
     }
     const setlist = setlistEngine.getSetlistState();
-    await setlistStorage.save(name.trim(), setlist.order);
+    await setlistStorage.save(name.trim(), setlist.order, setlistEngine.getSongOverrides());
     res.json({ success: true, name: name.trim() });
   });
 
@@ -162,6 +162,7 @@ export function createHttpServer(
       return;
     }
     setlistEngine.reorder(loaded.order);
+    setlistEngine.applySongOverrides(loaded.songOverrides);
     res.json({ success: true, loaded });
   });
 

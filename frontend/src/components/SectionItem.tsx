@@ -43,6 +43,7 @@ const SectionItem: Component<SectionItemProps> = (props) => {
       }}
       data-id={props.section.id}
       style={{ '--section-color': colorHex() }}
+      disabled={!!props.section.flags?.skip}
       onClick={handleClick}
     >
       <div class="section-tile-header">
