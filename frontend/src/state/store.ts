@@ -1,23 +1,11 @@
-import { AppState, ServerEvent, ClientAction, AppSettings, Setlist, PlaybackState } from '../types.js';
+import { createSignal } from 'solid-js';
+import { createStore, reconcile, produce } from 'solid-js/store';
 import { WsClient } from '../api/websocket.js';
 import { showToast } from '../components/Toast.js';
-
-function safeVibrate(pattern: number | number[]): void {
-  try {
-    if (
-      typeof navigator !== 'undefined' &&
-      'vibrate' in navigator &&
-      typeof navigator.vibrate === 'function' &&
-      (navigator as any).userActivation?.hasBeenActive
-    ) {
-      navigator.vibrate(pattern);
-    }
-  } catch {
-    // Ignore browser user-activation intervention errors
-  }
-}
+import type { AppState, ServerEvent, ClientAction, AppSettings } from '../types.js';
 
 const savedTheme = (localStorage.getItem('app-theme') as any) || 'midnight';
+document.documentElement.setAttribute('data-theme', savedTheme);
 
 const initialSettings: AppSettings = {
   theme: savedTheme,
@@ -31,191 +19,171 @@ const initialSettings: AppSettings = {
   preferredPort: 8080,
 };
 
-const initialSetlist: Setlist = {
-  songs: [],
-  order: [],
-  isPlaying: false,
-  currentTime: 0,
-  tempo: 120,
-  totalDuration: 0,
-  remainingTime: 0,
+const initialState: AppState = {
+  connection: 'connecting',
+  setlist: {
+    songs: [],
+    order: [],
+    isPlaying: false,
+    currentTime: 0,
+    tempo: 120,
+    totalDuration: 0,
+    remainingTime: 0,
+  },
+  playback: {
+    isPlaying: false,
+    isPaused: false,
+    currentTime: 0,
+    tempo: 120,
+    songProgress: 0,
+    sectionProgress: 0,
+    isLooping: false,
+    isCountingIn: false,
+    remainingTimeInSong: 0,
+    remainingTimeInSet: 0,
+  },
+  settings: initialSettings,
+  midi: {
+    inputs: [],
+    outputs: [],
+    mappings: [],
+    learning: false,
+    learningMappingId: undefined,
+  },
+  currentView: 'setlist',
 };
 
-const initialPlayback: PlaybackState = {
-  isPlaying: false,
-  isPaused: false,
-  currentTime: 0,
-  tempo: 120,
-  songProgress: 0,
-  sectionProgress: 0,
-  isLooping: false,
-  isCountingIn: false,
-  remainingTimeInSong: 0,
-  remainingTimeInSet: 0,
-};
+export const [store, setStore] = createStore<AppState>(initialState);
+export const [connection, setConnection] = createSignal<'connected' | 'disconnected' | 'connecting'>('connecting');
 
-export class Store {
-  private state: AppState;
-  private listeners: Set<(state: AppState) => void> = new Set();
-  private wsClient: WsClient;
-
-  constructor() {
-    this.state = {
-      connection: 'disconnected',
-      setlist: initialSetlist,
-      playback: initialPlayback,
-      settings: initialSettings,
-      midi: {
-        inputs: [],
-        outputs: [],
-        mappings: [],
-        learning: false,
-      },
-      currentView: 'setlist',
-    };
-
-    this.wsClient = new WsClient(
-      (msg) => this.handleServerEvent(msg),
-      (status) => {
-        this.state.connection = status;
-        this.notify();
+const handleMessage = (event: ServerEvent) => {
+  switch (event.type) {
+    case 'state': {
+      const payload = event.payload;
+      if (payload.setlist) setStore('setlist', reconcile(payload.setlist));
+      if (payload.playback) setStore('playback', reconcile(payload.playback));
+      if (payload.settings) {
+        setStore('settings', reconcile(payload.settings));
+        if (payload.settings.theme) {
+          applyTheme(payload.settings.theme);
+        }
       }
-    );
-
-    this.applyTheme(this.state.settings.theme || savedTheme);
-    this.wsClient.connect();
-  }
-
-  public applyTheme(theme: string): void {
-    if (!theme) return;
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('app-theme', theme);
-  }
-
-  public getState(): AppState {
-    return this.state;
-  }
-
-  public subscribe(cb: (state: AppState) => void): () => void {
-    this.listeners.add(cb);
-    cb(this.state);
-    return () => this.listeners.delete(cb);
-  }
-
-  private notify(): void {
-    for (const listener of this.listeners) {
-      listener(this.state);
+      if (payload.midi) {
+        setStore('midi', 'inputs', payload.midi.inputs || []);
+        setStore('midi', 'outputs', payload.midi.outputs || []);
+        setStore('midi', 'mappings', payload.midi.mappings || []);
+      }
+      break;
     }
-  }
-
-  private handleServerEvent(msg: ServerEvent): void {
-    switch (msg.type) {
-      case 'state':
-        this.state.setlist = msg.payload.setlist;
-        this.state.playback = msg.payload.playback;
-        this.state.settings = msg.payload.settings;
-        if (msg.payload.midi) {
-          this.state.midi.inputs = msg.payload.midi.inputs || [];
-          this.state.midi.outputs = msg.payload.midi.outputs || [];
-          this.state.midi.mappings = msg.payload.midi.mappings || [];
+    case 'playback.tick': {
+      const p = event.payload;
+      if (p.currentTime !== undefined) setStore('playback', 'currentTime', p.currentTime);
+      if (p.isPlaying !== undefined) setStore('playback', 'isPlaying', p.isPlaying);
+      if (p.tempo !== undefined) setStore('playback', 'tempo', p.tempo);
+      if (p.songProgress !== undefined) setStore('playback', 'songProgress', p.songProgress);
+      if (p.sectionProgress !== undefined) setStore('playback', 'sectionProgress', p.sectionProgress);
+      if (p.remainingTimeInSong !== undefined) setStore('playback', 'remainingTimeInSong', p.remainingTimeInSong);
+      break;
+    }
+    case 'playback.songChanged': {
+      setStore('playback', 'activeSongId', event.payload.songId);
+      setStore('setlist', 'activeSongId', event.payload.songId);
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate(50);
+        } catch {
+          // ignore
         }
-        if (msg.payload.settings.theme) {
-          this.applyTheme(msg.payload.settings.theme);
-        }
-        if (msg.payload.settings.defaultView && this.state.currentView === 'setlist') {
-          this.state.currentView = msg.payload.settings.defaultView;
-        }
-        break;
-
-      case 'playback.tick':
-        this.state.playback.currentTime = msg.payload.currentTime;
-        this.state.playback.isPlaying = msg.payload.isPlaying;
-        this.state.playback.tempo = msg.payload.tempo;
-        this.state.playback.songProgress = msg.payload.songProgress;
-        this.state.playback.sectionProgress = msg.payload.sectionProgress;
-        this.state.playback.remainingTimeInSong = msg.payload.remainingTimeInSong;
-        this.state.setlist.currentTime = msg.payload.currentTime;
-        this.state.setlist.isPlaying = msg.payload.isPlaying;
-        break;
-
-      case 'playback.songChanged':
-        this.state.playback.activeSongId = msg.payload.songId;
-        this.state.setlist.activeSongId = msg.payload.songId;
-        safeVibrate(50);
-        break;
-
-      case 'playback.sectionChanged':
-        this.state.playback.activeSectionId = msg.payload.sectionId;
-        this.state.setlist.activeSectionId = msg.payload.sectionId;
-        break;
-
-      case 'playback.queued':
-        this.state.playback.queuedSongId = msg.payload.songId;
-        this.state.playback.queuedSectionId = msg.payload.sectionId;
-        this.state.setlist.queuedSongId = msg.payload.songId;
-        this.state.setlist.queuedSectionId = msg.payload.sectionId;
-        break;
-
-      case 'playback.queueCleared':
-        this.state.playback.queuedSongId = undefined;
-        this.state.playback.queuedSectionId = undefined;
-        this.state.setlist.queuedSongId = undefined;
-        this.state.setlist.queuedSectionId = undefined;
-        break;
-
-      case 'setlist.updated':
-        this.state.setlist = msg.payload;
-        break;
-
-      case 'midi.devices':
-        this.state.midi.inputs = msg.payload.inputs;
-        this.state.midi.outputs = msg.payload.outputs;
-        break;
-
-      case 'midi.mappings':
-        this.state.midi.mappings = msg.payload;
-        break;
-
-      case 'midi.learning':
-        this.state.midi.learning = true;
-        this.state.midi.learningMappingId = msg.payload.mappingId;
-        break;
-
-      case 'midi.learned':
-        this.state.midi.learning = false;
-        this.state.midi.learningMappingId = undefined;
-        if (msg.payload.mappings) {
-          this.state.midi.mappings = msg.payload.mappings;
-        } else if (msg.payload.mapping) {
-          const idx = this.state.midi.mappings.findIndex(m => m.id === msg.payload.mappingId);
+      }
+      break;
+    }
+    case 'playback.sectionChanged': {
+      setStore('playback', 'activeSectionId', event.payload.sectionId);
+      setStore('setlist', 'activeSectionId', event.payload.sectionId);
+      break;
+    }
+    case 'playback.queued': {
+      setStore('playback', 'queuedSongId', event.payload.songId);
+      setStore('playback', 'queuedSectionId', event.payload.sectionId);
+      setStore('setlist', 'queuedSongId', event.payload.songId);
+      setStore('setlist', 'queuedSectionId', event.payload.sectionId);
+      break;
+    }
+    case 'playback.queueCleared': {
+      setStore('playback', 'queuedSongId', undefined);
+      setStore('playback', 'queuedSectionId', undefined);
+      setStore('setlist', 'queuedSongId', undefined);
+      setStore('setlist', 'queuedSectionId', undefined);
+      break;
+    }
+    case 'setlist.updated': {
+      setStore('setlist', reconcile(event.payload));
+      break;
+    }
+    case 'setlist.saved': {
+      showToast(`Setlist "${event.payload.name}" saved!`, 'success');
+      break;
+    }
+    case 'midi.devices': {
+      setStore('midi', 'inputs', event.payload.inputs || []);
+      setStore('midi', 'outputs', event.payload.outputs || []);
+      break;
+    }
+    case 'midi.mappings': {
+      setStore('midi', 'mappings', event.payload || []);
+      break;
+    }
+    case 'midi.learning': {
+      setStore('midi', 'learning', true);
+      setStore('midi', 'learningMappingId', event.payload.mappingId);
+      break;
+    }
+    case 'midi.learned': {
+      showToast('MIDI mapping learned!', 'success');
+      setStore('midi', 'learning', false);
+      setStore('midi', 'learningMappingId', undefined);
+      if (event.payload.mappings) {
+        setStore('midi', 'mappings', event.payload.mappings);
+      } else if (event.payload.mapping) {
+        const learned = event.payload.mapping;
+        setStore('midi', 'mappings', produce(mappings => {
+          const idx = mappings.findIndex(m => m.id === learned.id);
           if (idx !== -1) {
-            this.state.midi.mappings[idx] = msg.payload.mapping;
+            mappings[idx] = learned;
           } else {
-            this.state.midi.mappings.push(msg.payload.mapping);
+            mappings.push(learned);
           }
-        }
-        const m = msg.payload.mapping;
-        const noteDetail = m.note !== undefined ? `Note:${m.note}` : m.cc !== undefined ? `CC:${m.cc}` : '';
-        showToast(`MIDI Learned: "${m.inputName || 'Device'}" (${m.messageType.toUpperCase()} Ch:${m.channel} ${noteDetail})`, 'success');
-        break;
-    }
-    this.notify();
-  }
-
-  public dispatch(action: ClientAction): void {
-    if (action.type === 'settings.set') {
-      (this.state.settings as any)[action.key] = action.value;
-      if (action.key === 'theme') {
-        this.applyTheme(action.value);
+        }));
       }
+      break;
     }
-    this.wsClient.send(action);
+    case 'error': {
+      showToast(event.payload.message || 'An error occurred', 'error');
+      break;
+    }
+    default:
+      console.warn('Unhandled event type', (event as any).type);
   }
+};
 
-  public setView(view: AppState['currentView']): void {
-    this.state.currentView = view;
-    this.notify();
-  }
-}
+const handleStatusChange = (status: 'connected' | 'disconnected' | 'connecting') => {
+  setConnection(status);
+  setStore('connection', status);
+};
 
-export const store = new Store();
+const wsClient = new WsClient(handleMessage, handleStatusChange);
+wsClient.connect();
+
+export const dispatch = (action: ClientAction) => {
+  wsClient.send(action);
+};
+
+export const setView = (view: AppState['currentView']) => {
+  setStore('currentView', view);
+};
+
+export const applyTheme = (theme: string) => {
+  setStore('settings', 'theme', theme as any);
+  localStorage.setItem('app-theme', theme);
+  document.documentElement.setAttribute('data-theme', theme);
+};
