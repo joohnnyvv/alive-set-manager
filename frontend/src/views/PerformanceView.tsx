@@ -64,52 +64,81 @@ const PerformanceView: Component = () => {
         />
       </Show>
 
-      {/* NOW PLAYING Hero */}
-      <div
-        class="now-playing-card"
-        style={{
-          "border-left": activeSong() ? `4px solid ${getCssColor(activeSong()?.color)}` : 'none'
-        }}
-      >
-        <Show
-          when={activeSong()}
-          fallback={
-            <>
-              <div class="now-playing-label">NO SONG PLAYING</div>
-              <h1 class="now-playing-title">— Select a Song —</h1>
-            </>
-          }
+      <div class="stage-main">
+        {/* Current song */}
+        <div
+          class="now-playing-card"
+          style={{
+            "border-left": activeSong() ? `4px solid ${getCssColor(activeSong()?.color)}` : 'none'
+          }}
         >
-          <div class="now-playing-label">NOW PLAYING</div>
-          <h1 class="now-playing-title">{activeSong()!.name}</h1>
-          <Show when={activeSong()!.description}>
-            <div class="now-playing-desc">{`{${activeSong()!.description}}`}</div>
-          </Show>
+          <Show
+            when={activeSong()}
+            fallback={
+              <>
+                <div class="now-playing-label">NO SONG PLAYING</div>
+                <h1 class="now-playing-title">— Select a Song —</h1>
+              </>
+            }
+          >
+            <div class="now-playing-label">CURRENT SONG</div>
+            <h1 class="now-playing-title">{activeSong()!.name}</h1>
+            <Show when={activeSong()!.description}>
+              <div class="now-playing-desc">{`{${activeSong()!.description}}`}</div>
+            </Show>
 
-          {/* Active Section & Chords */}
-          <div class="active-section-hero">
-            <Show when={activeSection()}>
-              <div class="active-section-name">
-                <span class="sec-label">SECTION:</span>
-                <strong>{` ${activeSection()!.name}`}</strong>
-              </div>
-              <Show when={activeSection()?.chords}>
-                <div class="hero-chord-container">
-                  <span class="hero-chord-label">CHORDS:</span>
-                  <div class="hero-chord-pills">
-                    {parseChordTokens(activeSection()!.chords!).map((chord, idx, arr) => (
-                      <>
-                        <span class="chord-pill">{chord}</span>
-                        {idx < arr.length - 1 && <span class="chord-sep">•</span>}
-                      </>
-                    ))}
-                  </div>
+            {/* Active section */}
+            <div class="active-section-hero">
+              <Show when={activeSection()}>
+                <div class="active-section-name">
+                  <span class="sec-label">SECTION:</span>
+                  <strong>{` ${activeSection()!.name}`}</strong>
                 </div>
               </Show>
-            </Show>
+            </div>
+          </Show>
+        </div>
+
+        <aside class="stage-action-rail">
+          {/* Next Song Card */}
+          <div
+            class="next-song-card"
+            onClick={() => {
+              const next = nextSong();
+              if (next) dispatch({ type: 'jump-to-song', songId: next.id });
+            }}
+          >
+            <span class="next-song-label">NEXT UP</span>
+            <span class="next-song-name">{nextSong() ? nextSong()!.name : 'End of Set'}</span>
+          </div>
+
+          {/* Transport Controls */}
+          <TransportControls
+            playback={store.playback}
+            onPlay={() => dispatch({ type: 'play' })}
+            onPause={() => dispatch({ type: 'pause' })}
+            onStop={() => dispatch({ type: 'stop' })}
+            onPrev={() => dispatch({ type: 'prev-song' })}
+            onNext={() => dispatch({ type: 'next-song' })}
+            onGo={() => dispatch({ type: 'go' })}
+          />
+        </aside>
+      </div>
+      <Show when={activeSong()}>
+        <Show when={activeSection()?.chords}>
+          <div class="hero-chord-container">
+            <span class="hero-chord-label">CHORDS:</span>
+            <div class="hero-chord-pills">
+              {parseChordTokens(activeSection()!.chords!).map((chord, idx, arr) => (
+                <>
+                  <span class="chord-pill">{chord}</span>
+                  {idx < arr.length - 1 && <span class="chord-sep">—</span>}
+                </>
+              ))}
+            </div>
           </div>
         </Show>
-      </div>
+      </Show>
 
       {/* Progress Bar */}
       <ProgressBar
@@ -140,29 +169,6 @@ const PerformanceView: Component = () => {
           </div>
         </div>
       </Show>
-
-      {/* Next Song Card */}
-      <div
-        class="next-song-card"
-        onClick={() => {
-          const next = nextSong();
-          if (next) dispatch({ type: 'jump-to-song', songId: next.id });
-        }}
-      >
-        <span class="next-song-label">NEXT:</span>
-        <span class="next-song-name">{nextSong() ? nextSong()!.name : 'End of Set'}</span>
-      </div>
-
-      {/* Transport Controls */}
-      <TransportControls
-        playback={store.playback}
-        onPlay={() => dispatch({ type: 'play' })}
-        onPause={() => dispatch({ type: 'pause' })}
-        onStop={() => dispatch({ type: 'stop' })}
-        onPrev={() => dispatch({ type: 'prev-song' })}
-        onNext={() => dispatch({ type: 'next-song' })}
-        onGo={() => dispatch({ type: 'go' })}
-      />
     </div>
   );
 };

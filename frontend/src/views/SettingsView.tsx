@@ -16,7 +16,7 @@ export default function SettingsView() {
 
   const themes: { id: AppTheme; name: string; desc: string }[] = [
     { id: 'midnight', name: 'Midnight Studio', desc: 'Toned dark mode with slate tones & emerald accents.' },
-    { id: 'live-dark', name: 'Ableton Live Dark', desc: 'Classic Ableton Live 11/12 dark gray style with warm amber accents.' },
+    { id: 'live-dark', name: 'Ableton Live Dark', desc: 'Warm black and ivory with vermilion accents for the stage.' },
     { id: 'live-light', name: 'Ableton Live Light', desc: 'Light gray theme for bright daylight or outdoor festival stages.' },
     { id: 'high-contrast', name: 'High Contrast Stage', desc: 'Pitch black background with neon lime accents & bold borders.' },
     { id: 'soft-dark', name: 'Soft Dark', desc: 'Low-contrast dark theme with muted tones and zero sharp flare.' },

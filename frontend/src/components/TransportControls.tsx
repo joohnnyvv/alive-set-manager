@@ -64,6 +64,7 @@ const TransportControls: Component<TransportControlsProps> = (props) => {
         onClick={() => { logUi(`Clicked GO button (State: ${goState().text})`); props.onGo(); }}
       >
         <span class="go-icon" innerHTML={goState().icon}></span>
+        <span class="go-word" aria-hidden="true">GO</span>
         <span class="go-label">{goState().text}</span>
       </button>
     </div>
