@@ -313,6 +313,24 @@ export default function SettingsView() {
         <div class="settings-card">
           <h3>Mobile Device Connection</h3>
           <p class="settings-desc">Connect phones or tablets on stage using your local Wi-Fi network.</p>
+          <div class="setting-row">
+            <label for="toggle-lan-mode">Local network access</label>
+            <input
+              type="checkbox"
+              role="switch"
+              id="toggle-lan-mode"
+              aria-describedby="lan-mode-description"
+              checked={store.settings.lanMode ?? false}
+              disabled={store.connection !== 'connected'}
+              onChange={(e) => {
+                dispatch({ type: 'settings.set', key: 'lanMode', value: e.currentTarget.checked });
+              }}
+            />
+          </div>
+          <p id="lan-mode-description" class="settings-desc">
+            Allow phones and tablets on the same Wi-Fi network to connect using the QR code.
+            Restart Alive Set Manager after changing this setting to apply it.
+          </p>
           <div style={{ display: 'flex', 'flex-wrap': 'wrap', 'justify-content': 'space-between', 'align-items': 'center', gap: '20px', 'margin-top': '10px' }}>
             <div class="connection-info" style={{ display: 'flex', 'flex-direction': 'column', gap: '10px', flex: '1', 'min-width': '240px' }}>
               <div>

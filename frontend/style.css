@@ -152,7 +152,6 @@ body {
 #app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
   height: 100dvh;
   max-width: 1200px;
   margin: 0 auto;
