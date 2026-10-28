@@ -22,7 +22,7 @@ async function createWindow() {
     minWidth: 850,
     minHeight: 600,
     title: 'Alive Set Manager',
-    titleBarStyle: 'hiddenInset',
+    titleBarStyle: 'default',
     backgroundColor: '#121212',
     webPreferences: {
       nodeIntegration: false,
