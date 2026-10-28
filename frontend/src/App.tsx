@@ -55,7 +55,7 @@ const App: Component = () => {
           ></span>
         </div>
       </header>
-      <main id="app-content" class="app-content">
+      <main id="app-content" class="app-content" classList={{ 'app-content-setlist': store.currentView === 'setlist' }}>
         <Dynamic component={currentComponent()} />
       </main>
     </>
