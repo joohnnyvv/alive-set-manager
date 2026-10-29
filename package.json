@@ -112,7 +112,7 @@
     "electron": "43.8.4",
     "electron-builder": "26.15.3",
     "sharp": "0.35.5",
-    "tsx": "^4.23.8",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.2.0",
     "vite-plugin-solid": "^2.11.14"
