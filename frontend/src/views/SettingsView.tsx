@@ -1,7 +1,7 @@
 import { createSignal, For, Show, onMount } from 'solid-js';
-import { store, dispatch, applyTheme } from '../state/store.js';
+import { store, dispatch, applyTheme, setView } from '../state/store.js';
 import { showToast } from '../components/Toast.js';
-import { apiFetch } from '../api/http.js';
+import { apiFetch, getAuthToken } from '../api/http.js';
 import type { AppTheme, JumpMode, MidiAction, MidiMapping } from '../types.js';
 import QRCodeStylingPkg from 'qr-code-styling';
 const QRCodeStyling: any = (QRCodeStylingPkg as any).default || QRCodeStylingPkg;
@@ -39,7 +39,8 @@ export default function SettingsView() {
         const ipList = data.ips && data.ips.length > 0 ? data.ips : ['localhost'];
         setIps(ipList);
         if (ipList.length > 0 && qrRef) {
-          const mainUrl = `http://${ipList[0]}:${port}`;
+          const token = getAuthToken();
+          const mainUrl = `http://${ipList[0]}:${port}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
           const qrCode = new QRCodeStyling({
             width: 160,
             height: 160,
@@ -126,6 +127,8 @@ export default function SettingsView() {
               {(theme) => (
                 <div
                   class="theme-card"
+                  role="button" tabIndex={0} aria-label={theme.name}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                   classList={{ 'is-selected': (store.settings.theme || 'midnight') === theme.id }}
                   data-theme-val={theme.id}
                   onClick={() => {
@@ -309,6 +312,7 @@ export default function SettingsView() {
           </div>
         </div>
 
+        <div class="settings-card"><h3>Setup & support</h3><p>Install AbletonJS, read help, check updates, or export diagnostics.</p><button class="btn" onClick={() => setView('help')}>Open setup & help</button></div>
         {/* Section 4: Mobile Device Connection */}
         <div class="settings-card">
           <h3>Mobile Device Connection</h3>

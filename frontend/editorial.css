@@ -250,3 +250,25 @@ button:disabled { cursor: not-allowed; }
 @media (min-width: 641px) and (max-height: 800px) {
   .hero-chord-pills .chord-pill { font-size: clamp(48px, 6vw, 82px); }
 }
+
+.live-status-bar { padding: 5px 24px; color: var(--text-secondary); font-size: 12px; border-bottom: 1px solid var(--border-color); }
+.help-view { max-width: 1000px; margin: 0 auto; padding: 24px; line-height: 1.65; }
+.help-heading h1 { font-size: clamp(32px, 5vw, 56px); margin: 8px 0; }
+.help-view h2 { margin-top: 0; font-size: 24px; }
+.help-view .settings-card { margin: 20px 0; }
+.help-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.help-path, .help-view pre { overflow-wrap: anywhere; white-space: pre-wrap; font-size: 13px; }
+.help-view pre { background: var(--bg-primary); padding: 16px; border-radius: 8px; }
+.license-text { max-height: 440px; overflow: auto; }
+.help-message { padding: 12px; border: 1px solid var(--accent); border-radius: 8px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 600px) { .help-view { padding: 12px; } .app-nav { flex-wrap: wrap; } }
+
+/* Leave room for the progress and section controls on common stage laptops. */
+@media (min-width: 641px) {
+  .performance-view { gap: 20px; }
+  .now-playing-title { font-size: clamp(48px, 7.5vw, 110px); }
+  .active-section-name strong { font-size: clamp(36px, 5vw, 76px); }
+  .hero-chord-pills .chord-pill { font-size: clamp(44px, 7.2vw, 104px); }
+  .hero-chord-pills .chord-sep { font-size: 44px; }
+}

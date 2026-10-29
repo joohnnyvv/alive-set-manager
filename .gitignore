@@ -34,3 +34,13 @@ Thumbs.db
 # Temporary runtime files
 tmp/
 *.tmp
+
+# Generated release resources and browser reports
+resources/AbletonJS/
+resources/THIRD_PARTY_NOTICES.txt
+resources/LICENSES.chromium.html
+resources/sbom.json
+frontend/public/licenses/
+playwright-report/
+test-results/
+release-assets/

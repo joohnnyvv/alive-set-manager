@@ -29,7 +29,7 @@ export class WsClient {
     const token = getAuthToken();
     const wsUrl = `${protocol}//${host}/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 
-    logWsTx(`Connecting to ${wsUrl}...`);
+    logWsTx(`Connecting to ${host}...`);
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
@@ -42,7 +42,7 @@ export class WsClient {
       try {
         const parsed = JSON.parse(event.data) as ServerEvent;
         if (parsed.type !== 'playback.tick') {
-          logWsRx(`Received event: ${parsed.type}`, parsed);
+          logWsRx(`Received event: ${parsed.type}`);
         }
         this.onMessage(parsed);
       } catch (err) {
@@ -67,7 +67,7 @@ export class WsClient {
 
   public send(action: ClientAction): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      logWsTx(`Sending action: ${action.type}`, action);
+      logWsTx(`Sending action: ${action.type}`);
       this.ws.send(JSON.stringify(action));
     } else {
       console.warn('[WsClient] Cannot send, socket not open:', action);

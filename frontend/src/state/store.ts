@@ -54,6 +54,7 @@ const initialState: AppState = {
 };
 
 let receivedInitialState = false;
+let viewChosen = false;
 
 export const [store, setStore] = createStore<AppState>(initialState);
 export const [connection, setConnection] = createSignal<'connected' | 'disconnected' | 'connecting'>('connecting');
@@ -62,11 +63,12 @@ const handleMessage = (event: ServerEvent) => {
   switch (event.type) {
     case 'state': {
       const payload = event.payload;
+      setStore('liveConnected', !!payload.liveConnected);
       if (payload.setlist) setStore('setlist', reconcile(payload.setlist));
       if (payload.playback) setStore('playback', reconcile(payload.playback));
       if (payload.settings) {
         setStore('settings', reconcile(payload.settings));
-        if (!receivedInitialState && payload.settings.defaultView) {
+        if (!receivedInitialState && !viewChosen && payload.settings.defaultView) {
           setStore('currentView', payload.settings.defaultView);
         }
         if (payload.settings.theme) {
@@ -185,6 +187,7 @@ export const dispatch = (action: ClientAction) => {
 };
 
 export const setView = (view: AppState['currentView']) => {
+  viewChosen = true;
   setStore('currentView', view);
 };
 

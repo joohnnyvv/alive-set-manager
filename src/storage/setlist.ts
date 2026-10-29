@@ -1,10 +1,10 @@
 import fs from 'fs/promises';
 import path from 'path';
-import os from 'os';
+import { dataDirectory, atomicJson, readJson } from './files.js';
 import { StopBehavior } from '../types/index.js';
 
 function getSetlistsDir(): string {
-  return path.join(os.homedir(), '.ableset', 'setlists');
+  return path.join(dataDirectory(), 'setlists');
 }
 
 export interface SavedSetlistFile {
@@ -18,15 +18,11 @@ export interface SavedSetlistFile {
 
 export class SetlistStorage {
   constructor(private readonly directory = getSetlistsDir()) {
-    this.ensureDir();
+
   }
 
   private async ensureDir(): Promise<void> {
-    try {
-      await fs.mkdir(this.directory, { recursive: true });
-    } catch (err) {
-      console.error('[SetlistStorage] Failed to create setlists dir:', err);
-    }
+    await fs.mkdir(this.directory, { recursive: true });
   }
 
   public async listFiles(): Promise<string[]> {
@@ -54,7 +50,7 @@ export class SetlistStorage {
       duplicates,
     };
 
-    await fs.writeFile(filePath, JSON.stringify(fileContent, null, 2), 'utf-8');
+    await atomicJson(filePath, fileContent);
   }
 
   public async delete(name: string): Promise<boolean> {
@@ -72,12 +68,19 @@ export class SetlistStorage {
     await this.ensureDir();
     const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_');
     const filePath = path.join(this.directory, `${safeName}.json`);
-    try {
-      const data = await fs.readFile(filePath, 'utf-8');
-      return JSON.parse(data) as SavedSetlistFile;
-    } catch (err) {
-      console.error(`[SetlistStorage] Failed to load setlist ${name}:`, err);
-      return null;
-    }
+    const data = await readJson(filePath);
+    if (data === undefined) return null;
+    if (!validSetlist(data)) throw new Error('Invalid saved setlist. Original file retained.');
+    return data;
   }
+}
+
+export function validSetlist(value: unknown): value is SavedSetlistFile {
+  const v = value as SavedSetlistFile;
+  return !!v && [1, 2].includes(v.version) && typeof v.name === 'string'
+    && Array.isArray(v.order) && v.order.every(id => typeof id === 'string')
+    && (!v.duplicates || Object.values(v.duplicates).every(id => typeof id === 'string'))
+    && (!v.songOverrides || Object.values(v.songOverrides).every(o => o && typeof o === 'object'
+      && (o.duration === undefined || (Number.isFinite(o.duration) && o.duration > 0))
+      && (o.stopBehavior === undefined || ['default', 'auto-jump', 'stop', 'pause'].includes(o.stopBehavior))));
 }
