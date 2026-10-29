@@ -1,5 +1,5 @@
 import { SetlistEngine } from './setlist.js';
-import { AbletonBridge } from '../ableton/bridge.js';
+import type { LiveAdapter } from '../ableton/bridge.js';
 import { Timekeeper } from './timekeeper.js';
 import { SettingsStorage } from '../storage/settings.js';
 import { Song, Section, JumpMode } from '../types/index.js';
@@ -10,7 +10,7 @@ export class JumpEngine {
 
   constructor(
     private setlistEngine: SetlistEngine,
-    private abletonBridge: AbletonBridge,
+    private abletonBridge: LiveAdapter,
     private timekeeper: Timekeeper,
     private settingsStorage: SettingsStorage,
     private onQueueChanged?: (songId?: string, sectionId?: string) => void

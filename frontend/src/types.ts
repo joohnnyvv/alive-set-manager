@@ -123,6 +123,7 @@ export interface MidiMapping {
 }
 
 export interface AppState {
+  liveConnected?: boolean;
   connection: 'connected' | 'disconnected' | 'connecting';
   setlist: Setlist;
   playback: PlaybackState;
@@ -134,11 +135,11 @@ export interface AppState {
     learning: boolean;
     learningMappingId?: string;
   };
-  currentView: 'setlist' | 'performance' | 'sections' | 'settings';
+  currentView: 'setlist' | 'performance' | 'sections' | 'settings' | 'help';
 }
 
 export type ServerEvent =
-  | { type: 'state'; payload: { setlist: Setlist; playback: PlaybackState; settings: AppSettings; midi?: { inputs: string[]; outputs: string[]; mappings: MidiMapping[] } } }
+  | { type: 'state'; payload: { liveConnected?: boolean; setlist: Setlist; playback: PlaybackState; settings: AppSettings; midi?: { inputs: string[]; outputs: string[]; mappings: MidiMapping[] } } }
   | { type: 'playback.tick'; payload: { currentTime: number; isPlaying: boolean; tempo: number; songProgress: number; sectionProgress: number; remainingTimeInSong: number } }
   | { type: 'playback.songChanged'; payload: { songId: string; previousSongId?: string } }
   | { type: 'playback.sectionChanged'; payload: { sectionId: string; previousSectionId?: string } }

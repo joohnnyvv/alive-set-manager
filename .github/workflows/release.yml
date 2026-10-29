@@ -1,0 +1,54 @@
+name: Draft release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - run: node scripts/release.mjs validate
+  verify:
+    needs: validate
+    uses: ./.github/workflows/verify.yml
+  draft:
+    needs: [validate, verify]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+      - run: node scripts/release.mjs assemble
+      - name: Create or repair draft only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" --json isDraft > release-state.json; then
+            node -e 'if (!require("./release-state.json").isDraft) throw new Error("Published releases are immutable")'
+          else
+            gh release create "$TAG" --verify-tag --draft --prerelease --title "Alive Set Manager $TAG" --notes-file release-notes.md
+          fi
+          gh release edit "$TAG" --notes-file release-notes.md
+          gh release upload "$TAG" release-assets/* --clobber

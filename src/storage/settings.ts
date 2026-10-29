@@ -3,13 +3,7 @@ import path from 'path';
 import os from 'os';
 import { AppSettings } from '../types/index.js';
 
-function getStorageDir(): string {
-  return path.join(os.homedir(), '.ableset');
-}
-
-function getSettingsFilePath(): string {
-  return path.join(getStorageDir(), 'settings.json');
-}
+import { dataDirectory, atomicJson, readJson } from './files.js';
 
 const defaultSettings: AppSettings = {
   theme: 'midnight',
@@ -125,37 +119,24 @@ export function validateSettingsPayload(payload: unknown): ValidationResult {
 export class SettingsStorage {
   private settings: AppSettings = { ...defaultSettings };
 
-  private async ensureDir(): Promise<void> {
-    try {
-      await fs.mkdir(getStorageDir(), { recursive: true });
-    } catch (err) {
-      console.error('[SettingsStorage] Error creating settings directory:', err);
-    }
-  }
+  constructor(private readonly directory = dataDirectory()) {}
 
   public async load(): Promise<AppSettings> {
-    await this.ensureDir();
-    const filePath = getSettingsFilePath();
-    try {
-      const data = await fs.readFile(filePath, 'utf-8');
-      const loaded = JSON.parse(data);
-      const validation = validateSettingsPayload(loaded);
-      this.settings = { ...defaultSettings, ...validation.sanitized };
-    } catch (err) {
-      // If file doesn't exist, save default
-      await this.save();
-    }
+    const loaded = await readJson(path.join(this.directory, 'settings.json'));
+    if (loaded === undefined) { await this.save(); return this.settings; }
+    const validation = validateSettingsPayload(loaded);
+    if (!validation.valid) throw new Error('Invalid saved settings. Original file retained.');
+    this.settings = { ...defaultSettings, ...validation.sanitized };
     return this.settings;
   }
 
   public async save(): Promise<void> {
-    await this.ensureDir();
-    const filePath = getSettingsFilePath();
-    try {
-      await fs.writeFile(filePath, JSON.stringify(this.settings, null, 2), 'utf-8');
-    } catch (err) {
-      console.error('[SettingsStorage] Error saving settings:', err);
-    }
+    await atomicJson(path.join(this.directory, 'settings.json'), this.settings);
+  }
+
+  public publicSettings(): AppSettings {
+    const { authToken, ...safe } = this.settings;
+    return safe;
   }
 
   public getSettings(): AppSettings {
@@ -167,8 +148,9 @@ export class SettingsStorage {
     if (!validation.valid) {
       throw new Error(`Validation failed for setting "${key}": ${validation.errors.join(', ')}`);
     }
-    this.settings = { ...this.settings, ...validation.sanitized };
-    await this.save();
+    const next = { ...this.settings, ...validation.sanitized };
+    await atomicJson(path.join(this.directory, 'settings.json'), next);
+    this.settings = next;
     return this.settings;
   }
 
@@ -177,8 +159,9 @@ export class SettingsStorage {
     if (!validation.valid) {
       throw new Error(`Validation failed for settings: ${validation.errors.join(', ')}`);
     }
-    this.settings = { ...this.settings, ...validation.sanitized };
-    await this.save();
+    const next = { ...this.settings, ...validation.sanitized };
+    await atomicJson(path.join(this.directory, 'settings.json'), next);
+    this.settings = next;
     return this.settings;
   }
 }

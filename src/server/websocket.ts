@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import { ServerEvent, ClientAction, PlaybackState, MidiAction } from '../types/index.js';
 import { SetlistEngine } from '../engine/setlist.js';
-import { AbletonBridge } from '../ableton/bridge.js';
+import type { LiveAdapter } from '../ableton/bridge.js';
 import { SettingsStorage } from '../storage/settings.js';
 import { SetlistStorage } from '../storage/setlist.js';
 import { JumpEngine } from '../engine/jump.js';
@@ -18,7 +18,7 @@ export class WsServer {
   constructor(
     server: Server,
     private setlistEngine: SetlistEngine,
-    private abletonBridge: AbletonBridge,
+    private abletonBridge: LiveAdapter,
     private settingsStorage: SettingsStorage,
     private setlistStorage: SetlistStorage,
     private jumpEngine: JumpEngine,
@@ -51,6 +51,7 @@ export class WsServer {
         callback(true);
       },
     });
+    this.wss.on('error', error => logError('WS', 'Server error', error));
     this.setupWss();
   }
 
@@ -70,8 +71,9 @@ export class WsServer {
             this.abletonBridge.getCurrentSongTime(),
             this.abletonBridge.isPlaying()
           ),
-          playback: this.getPlaybackState(),
-          settings: this.settingsStorage.getSettings(),
+          liveConnected: this.abletonBridge.isConnected?.() ?? false,
+        playback: this.getPlaybackState(),
+          settings: this.settingsStorage.publicSettings(),
           midi: {
             inputs: devices.inputs,
             outputs: devices.outputs,
@@ -245,8 +247,9 @@ export class WsServer {
             type: 'state',
             payload: {
               setlist: this.setlistEngine.getSetlistState(),
-              playback: this.getPlaybackState(),
-              settings: this.settingsStorage.getSettings(),
+              liveConnected: this.abletonBridge.isConnected?.() ?? false,
+        playback: this.getPlaybackState(),
+              settings: this.settingsStorage.publicSettings(),
             },
           });
         } catch (err: any) {
@@ -563,8 +566,9 @@ export class WsServer {
           this.abletonBridge.getCurrentSongTime(),
           this.abletonBridge.isPlaying()
         ),
+        liveConnected: this.abletonBridge.isConnected?.() ?? false,
         playback: this.getPlaybackState(),
-        settings: this.settingsStorage.getSettings(),
+        settings: this.settingsStorage.publicSettings(),
         midi: {
           inputs: devices.inputs,
           outputs: devices.outputs,
@@ -581,6 +585,11 @@ export class WsServer {
       this.abletonBridge.isPlaying()
     );
     this.broadcast({ type: 'setlist.updated', payload: state });
+  }
+
+  public async close(): Promise<void> {
+    for (const client of this.clients) client.terminate();
+    await new Promise<void>(resolve => this.wss.close(() => resolve()));
   }
 
   public broadcast(event: ServerEvent): void {

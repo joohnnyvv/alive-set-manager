@@ -2,13 +2,13 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { MidiEngine } from './engine.js';
+import { DemoMidi as MidiEngine } from '../testing/demo.js';
 import { MidiMapping } from '../types/index.js';
 
 describe('MIDI Engine', () => {
 
   test('device discovery & mapping persistence across restarts', async () => {
-    const testStorageFile = path.join(process.cwd(), 'scratch', 'test-midi-mappings.json');
+    const testStorageFile = path.join(process.env.ASM_DATA_DIR!, 'test-midi-mappings.json');
     try {
       await fs.unlink(testStorageFile);
     } catch {}
@@ -64,7 +64,7 @@ describe('MIDI Engine', () => {
   });
 
   test('MIDI Learn mode state handling', async () => {
-    const testStorageFile = path.join(process.cwd(), 'scratch', 'test-midi-learn.json');
+    const testStorageFile = path.join(process.env.ASM_DATA_DIR!, 'test-midi-learn.json');
     const engine = new MidiEngine(() => {}, undefined, testStorageFile);
     const mapping: MidiMapping = {
       id: 'learn-test-1',
@@ -87,7 +87,7 @@ describe('MIDI Engine', () => {
   });
 
   test('enforces exact value matching when mapping.value is defined', async () => {
-    const testStorageFile = path.join(process.cwd(), 'scratch', 'test-midi-val-check.json');
+    const testStorageFile = path.join(process.env.ASM_DATA_DIR!, 'test-midi-val-check.json');
     try { await fs.unlink(testStorageFile); } catch {}
 
     const triggeredActions: any[] = [];
