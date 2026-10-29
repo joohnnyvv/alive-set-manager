@@ -110,7 +110,7 @@
     "@types/ws": "^8.18.1",
     "concurrently": "^10.0.4",
     "electron": "43.8.4",
-    "electron-builder": "26.15.3",
+    "electron-builder": "26.18.0",
     "sharp": "0.35.5",
     "tsx": "^4.23.8",
     "typescript": "^7.0.2",
