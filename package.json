@@ -89,7 +89,7 @@
   "license": "ISC",
   "description": "Stage-ready Ableton Live setlist controller",
   "dependencies": {
-    "ableton-js": "^4.1.0",
+    "ableton-js": "^5.0.4",
     "cors": "^2.8.6",
     "easymidi": "^3.2.0",
     "express": "^5.2.1",
