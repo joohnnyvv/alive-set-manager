@@ -1,9 +1,11 @@
-import { Component, For } from 'solid-js';
+import { Component, For, onMount, onCleanup } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
 import { store, setView, connection } from './state/store.js';
 import SetlistView from './views/SetlistView.js';
 import PerformanceView from './views/PerformanceView.js';
 import SectionsView from './views/SectionsView.js';
+import { manageDialogs } from './utils/dialogs.js';
+import HelpView from './views/HelpView.js';
 import SettingsView from './views/SettingsView.js';
 
 const viewMap = {
@@ -11,14 +13,23 @@ const viewMap = {
   performance: PerformanceView,
   sections: SectionsView,
   settings: SettingsView,
+  help: HelpView,
 } as const;
 
 const App: Component = () => {
+  onMount(() => {
+    onCleanup(manageDialogs());
+    if (!window.desktop) return;
+    const dispose = window.desktop.onHelp(() => setView('help'));
+    onCleanup(dispose);
+    void window.desktop.info().then(info => { if (!info.setupComplete) setView('help'); });
+  });
   const navItems = [
     { view: 'setlist' as const, label: 'Setlist' },
     { view: 'performance' as const, label: 'Stage View' },
     { view: 'sections' as const, label: 'Sections' },
     { view: 'settings' as const, label: 'Settings' },
+    { view: 'help' as const, label: 'Help' },
   ];
 
   const currentComponent = () => viewMap[store.currentView] || SetlistView;
@@ -51,10 +62,11 @@ const App: Component = () => {
         <div class="header-status">
           <span
             class={`status-dot status-${connection()}`}
-            title={`WebSocket: ${connection()}`}
+            title={`App: ${connection()} · Live: ${store.liveConnected ? 'connected' : 'not connected'}`}
           ></span>
         </div>
       </header>
+      <div class="live-status-bar" role="status">{connection() !== 'connected' ? 'Connecting to the app…' : !store.liveConnected ? 'Ableton Live not connected — open Help for setup.' : !store.setlist.songs.length ? 'Live connected · Add song locators to populate your setlist.' : 'Live connected'}</div>
       <main id="app-content" class="app-content" classList={{ 'app-content-setlist': store.currentView === 'setlist' }}>
         <Dynamic component={currentComponent()} />
       </main>

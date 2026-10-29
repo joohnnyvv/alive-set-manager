@@ -1,5 +1,5 @@
 import { PlaybackState } from '../types/index.js';
-import { AbletonBridge } from '../ableton/bridge.js';
+import type { LiveAdapter } from '../ableton/bridge.js';
 import { SetlistEngine } from './setlist.js';
 
 export class PlaybackTracker {
@@ -7,7 +7,7 @@ export class PlaybackTracker {
   private lastSectionId?: string;
 
   constructor(
-    private abletonBridge: AbletonBridge,
+    private abletonBridge: LiveAdapter,
     private setlistEngine: SetlistEngine,
     private onSongChanged?: (songId: string, prevSongId?: string) => void,
     private onSectionChanged?: (sectionId: string, prevSectionId?: string) => void

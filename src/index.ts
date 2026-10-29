@@ -1,5 +1,10 @@
 import http from 'http';
 import os from 'os';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { dataDirectory } from './storage/files.js';
+import { migrateLegacy } from './storage/migrate.js';
+import type { LiveAdapter } from './ableton/bridge.js';
 import { AbletonBridge } from './ableton/bridge.js';
 import { SetlistEngine } from './engine/setlist.js';
 import { SettingsStorage } from './storage/settings.js';
@@ -13,19 +18,31 @@ import { WsServer } from './server/websocket.js';
 import { MidiAction } from './types/index.js';
 import { logInfo } from './utils/logger.js';
 
-async function main() {
+export interface BackendOptions {
+  dataDir?: string;
+  live?: LiveAdapter;
+  midiFactory?: (onAction: (action: MidiAction) => Promise<void>, onLearned: (id: string, mapping: any) => void, file: string) => MidiEngine;
+  clock?: Timekeeper;
+  port?: number;
+  migrate?: boolean;
+}
+export interface BackendHandle { port: number; authToken?: string; close(): Promise<void>; live: LiveAdapter; }
+
+async function main(options: BackendOptions = {}): Promise<BackendHandle> {
   console.log('=== Starting Alive Set Manager Backend ===');
 
   // 1. Storage
-  const settingsStorage = new SettingsStorage();
+  const directory = options.dataDir || dataDirectory();
+  if (options.migrate !== false && !process.env.ASM_TEST) await migrateLegacy(directory);
+  const settingsStorage = new SettingsStorage(directory);
   await settingsStorage.load();
 
-  const setlistStorage = new SetlistStorage();
+  const setlistStorage = new SetlistStorage(path.join(directory, 'setlists'));
 
   // 2. Ableton & Engines
-  const abletonBridge = new AbletonBridge();
+  const abletonBridge = options.live || new AbletonBridge();
   const setlistEngine = new SetlistEngine();
-  const timekeeper = new Timekeeper();
+  const timekeeper = options.clock || new Timekeeper();
 
   let wsServer: WsServer;
 
@@ -67,15 +84,16 @@ async function main() {
     }
   };
 
-  const midiEngine = new MidiEngine(handleMidiAction, (mappingId, mapping) => {
+  const createMidi = options.midiFactory || ((action, learned, file) => new MidiEngine(action, learned, file));
+  const midiEngine = createMidi(handleMidiAction, (mappingId, mapping) => {
     if (wsServer) {
       const allMappings = midiEngine.getMappings();
       wsServer.broadcast({ type: 'midi.learned', payload: { mappingId, mapping, mappings: allMappings } });
       wsServer.broadcast({ type: 'midi.mappings', payload: allMappings });
     }
-  });
+  }, path.join(directory, 'midi-mappings.json'));
 
-  await midiEngine.init();
+  try { await midiEngine.init(); } catch (error) { midiEngine.close(); await abletonBridge.close(); throw error; }
 
   // 4. Connect Ableton Bridge & Start Timekeeper
   await abletonBridge.start();
@@ -134,11 +152,16 @@ async function main() {
   let loopPasses = 0;
   let isTickInFlight = false;
 
-  setInterval(async () => {
+  let previousConnection = abletonBridge.isConnected();
+  const ticker = setInterval(async () => {
     if (isTickInFlight) return;
     isTickInFlight = true;
 
     try {
+      if (previousConnection !== abletonBridge.isConnected()) {
+        previousConnection = abletonBridge.isConnected();
+        wsServer.broadcastFullState();
+      }
       const time = abletonBridge.getCurrentSongTime();
       const tempo = abletonBridge.getTempo();
       timekeeper.updateTime(time, tempo);
@@ -240,18 +263,30 @@ async function main() {
 
   // 7. Start listening on port
   const settings = settingsStorage.getSettings();
-  let port = settings.preferredPort || 8080;
+  let port = options.port ?? settings.preferredPort ?? 8080;
   const host = settings.lanMode ? '0.0.0.0' : '127.0.0.1';
 
-  return new Promise<number>((resolve, reject) => {
+  let closed = false;
+  const close = async () => {
+    if (closed) return;
+    closed = true;
+    clearInterval(ticker);
+    timekeeper.stop();
+    timekeeper.clearAll();
+    midiEngine.close();
+    await wsServer.close();
+    if (server.listening) await new Promise<void>(resolve => server.close(() => resolve()));
+    await abletonBridge.close();
+  };
+  return new Promise<BackendHandle>((resolve, reject) => {
     const startServerOnPort = (p: number) => {
       const onError = (err: any) => {
-        if (err.code === 'EADDRINUSE') {
+        if (err.code === 'EADDRINUSE' && p < Math.min(port + 10, 65535)) {
           console.warn(`Port ${p} is in use, trying port ${p + 1}...`);
           startServerOnPort(p + 1);
         } else {
           console.error('Server listen error:', err);
-          reject(err);
+          void close().finally(() => reject(err));
         }
       };
 
@@ -269,7 +304,7 @@ async function main() {
           console.log(` (LAN access disabled. Enable in settings for stage mobile access)`);
         }
         console.log(`==================================================\n`);
-        resolve(p);
+        resolve({ port: (server.address() as import('node:net').AddressInfo).port, close, live: abletonBridge, authToken: settings.authToken });
       });
     };
 
@@ -290,13 +325,12 @@ export function getLocalIpAddresses(): string[] {
   return ips;
 }
 
-export async function startBackendServer(): Promise<number> {
-  return main();
+export async function startBackendServer(options: BackendOptions = {}): Promise<BackendHandle> {
+  return main(options);
 }
 
-// Auto-run if executed directly via CLI (tsx or node)
-if (process.argv[1] && (process.argv[1].endsWith('index.ts') || process.argv[1].endsWith('index.js'))) {
-  main().catch(err => {
-    console.error('Fatal server startup error:', err);
-  });
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  main().then(handle => {
+    for (const signal of ['SIGINT', 'SIGTERM'] as const) process.once(signal, () => { void handle.close().then(() => process.exit()); });
+  }).catch(err => { console.error('Backend startup failed:', err); process.exitCode = 1; });
 }

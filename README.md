@@ -1,164 +1,109 @@
-# AbleSet Clone — Ableton Live Setlist Controller
+<p align="center"><img src="resources/icon.png" width="104" alt="Alive Set Manager pulse icon"></p>
+<h1 align="center">Alive Set Manager</h1>
+<p align="center">Your arrangement. Your running order. One clear view on stage.</p>
+<p align="center">
+  <a href="https://github.com/joohnnyvv/alive-set-manager/actions/workflows/verify.yml"><img src="https://github.com/joohnnyvv/alive-set-manager/actions/workflows/verify.yml/badge.svg" alt="Build and tests"></a>
+  <img src="https://img.shields.io/badge/status-alpha-orange" alt="Alpha">
+  <img src="https://img.shields.io/badge/license-ISC-blue" alt="ISC license">
+</p>
+<p align="center"><a href="https://github.com/joohnnyvv/alive-set-manager/releases"><strong>Downloads & release notes</strong></a> · <a href="docs/GETTING_STARTED.md">Get started</a> · <a href="https://github.com/joohnnyvv/alive-set-manager/issues">Report an issue</a></p>
 
-A web-based setlist controller for **Ableton Live** designed for live stage performances. Musicians and sound engineers can view setlists, reorder songs, jump between sections, trigger smart GO actions, and map MIDI pedalboards directly from any phone, tablet, or laptop on stage.
+![Stage View with a populated demo setlist](docs/images/theme-live-dark.png)
 
----
+A desktop setlist controller for **Ableton Live 12**, with a companion interface for phones and tablets on your local network. Arrange songs, see section chords, queue transitions, and map a MIDI pedal without losing sight of the performance.
 
-## 🚀 Features
+> **First alpha in preparation.** Download links will become usable when the first draft is published. Builds are not publisher-signed or notarized. Rehearse and keep backups; this is not yet certified for unattended stage use. See the [acceptance record](docs/RELEASE_CHECKLIST.md) for what has actually been tested.
 
-- **Stage-Optimized UI**: High contrast, bold typography, large touch targets (minimum 48×48dp, GO button 72px+), responsive for phones, tablets, and desktops.
-- **Section Chord Progressions**: Display stage-ready chord progression badges (`C` • `G` • `Am` • `F`) for each section in Performance View and Sections View; edit section chords on the fly in the Setlist Editor.
-- **5 Jump Modes**:
-  - **Quantized**: Immediate jump, letting Ableton quantize naturally on the beat grid.
-  - **End of Section**: Queues target; triggers jump pre-activation when current section finishes.
-  - **End of Song**: Queues target; triggers jump pre-activation when current song finishes.
-  - **Dynamic**: Auto-detects section vs song targets.
-  - **Manual**: Queues target until manual GO button press or playback stop.
-- **Pre-Activation Jump Engine**: Triggers Ableton locators `~50–100ms` ahead of musical boundaries so Live's internal quantization lands precisely on beat 1 bar 1.
-- **Arrangement Protection**: Uses `safeStartPlaying()` and `safeStopPlaying()` wrappers to completely prevent Ableton arrangement jump-to-start bugs.
-- **Setlist Editor**: Drag-and-drop song reordering, song duplication (`⧉`) for repeated tracks, soft skip/restore, stop mode badges (`⏹ STOP`, `⏸ PAUSE`, `⏭ AUTO`), song detail overrides, plain text copy/import.
-- **MIDI Controller Engine**: Full MIDI Learn support for Notes, CC, and Program Changes (`easymidi`).
-- **Screen Wake Lock**: Prevents phone screens from sleeping during live sets (`navigator.wakeLock`).
-- **Network Discovery**: Automatic Wi-Fi LAN IP display for quick mobile pairing.
+## Made for the set
 
----
+- **Setlist:** reorder, duplicate, skip, restore, and save named running orders.
+- **Stage View:** current song, section, chords, progress, next song, and a contextual GO button.
+- **Sections:** quick navigation through your arrangement.
+- **Five jump modes:** quantized, end of section, end of song, dynamic, and manual.
+- **MIDI Learn:** map notes, control changes, and program changes to playback actions.
+- **First-run setup:** install the bundled AbletonJS script into your User Library, with backups for replacements.
+- **Offline essentials:** fonts, setup instructions, help, and license notices live inside the app.
+- **Updates on your terms:** check releases and download manually; the alpha never restarts a performance to update.
 
-## 🎛️ How to Set Up Your Ableton Live Project
+| Setlist | Sections |
+| --- | --- |
+| ![Populated setlist editor](docs/images/setlist.png) | ![Section navigation](docs/images/sections.png) |
 
-This controller reads Ableton Live's arrangement **Cue Points (Locators)** and parses AbleSet-style notation to construct your setlist.
+## Five views of the same stage
 
-### 1. Locator Naming Rules
+All screenshots use the same original demo arrangement and actual application UI.
 
-In Ableton Live, create arrangement locators using the following naming conventions:
+| Midnight | Live Dark |
+| --- | --- |
+| ![Midnight theme](docs/images/theme-midnight.png) | ![Live Dark theme](docs/images/theme-live-dark.png) |
 
-| Locator Name Example | Meaning / Behavior |
-|----------------------|--------------------|
-| `Never Gonna Give You Up` | **Song Start**: Defines the beginning of a song. |
-| `> Verse 1` | **Section**: Defines a section inside the preceding song. |
-| `> Chorus {chords: C - G - Am - F}` | **Chord Progression**: Adds section chords badge (`C` • `G` • `Am` • `F`). |
-| `> Chorus {c: C G Am F}` or `{C G Am F}` | **Chord Syntax Alternatives**: Short prefix `c:` or direct chords in curly braces. |
-| `>> Chorus` | **Quick Access Section**: Highlighted for fast stage jumping. |
-| `{Key: C, Capo 1}` | **Description**: Adds metadata shown in curly braces. |
-| `#rock #live` | **Hashtag Tags**: Enables tag filtering in the song picker. |
-| `[3:45]` or `[225s]` | **Duration Override**: Overrides calculated song duration. |
-| `[blue]` or `[red]` | **Color Override**: Assigns card accent color. |
-| `SONG END` | **Song End**: Marks end of song and auto-jumps to next song. |
-| `STOP` or `AUTOSTOP` | **Stop Marker**: Halts playback automatically at song end. |
-| `> Intro +LOOP` | **Loop Section**: Enables Ableton loop for this section. |
-| `> Bridge +LOOP:4` | **Counted Loop**: Loops section exactly 4 times. |
-| `> Outro +PAUSE` | **Pause Flag**: Pauses playhead at locator. |
-| `* Scratch Pad` | **Ignored Locator**: Locators starting with `*` are omitted. |
-| `[nosong]` | **Non-Song Item**: E.g. `Interlude [nosong]` (not counted in song numbers). |
+| Live Light | High Contrast |
+| --- | --- |
+| ![Live Light theme](docs/images/theme-live-light.png) | ![High Contrast theme](docs/images/theme-high-contrast.png) |
 
-#### Example Arrangement Layout:
+| Soft Dark | Mobile Stage View |
+| --- | --- |
+| ![Soft Dark theme](docs/images/theme-soft-dark.png) | <img src="docs/images/mobile.png" width="260" alt="Mobile Stage View"> |
+
+## Install and connect
+
+1. Choose the download matching your computer from [Releases](https://github.com/joohnnyvv/alive-set-manager/releases).
+2. **macOS:** open the DMG and drag the app into Applications. **Windows:** run the per-user installer. No Node.js installation is needed.
+3. Open **Help → Connect Ableton Live 12**. Confirm your User Library and install AbletonJS. Existing replacements are backed up outside Live’s Remote Scripts folder.
+4. In Live’s **Settings → Link, Tempo & MIDI**, choose **AbletonJS** as a Control Surface, with Input and Output set to **None**. Restart Live if necessary.
+5. Add song and section locators to your arrangement. The app reports its own connection and Live’s connection separately.
+
 ```text
-[0.0.0]  Follow Night {Capo 2} #rock [blue]
-[16.0.0] > Intro {C - G}
-[32.0.0] >> Chorus {chords: C - G - Am - F} +LOOP
-[64.0.0] > Outro {Am - F - C - G}
-[80.0.0] SONG END
-[96.0.0] Acoustic Song {Tuning: DADGAD}
-[128.0]  STOP
+Northern Lights {Key: F#m} [blue]
+> Intro {F#m D A E}
+>> Chorus {F#m D A E}
+> Bridge +LOOP:2
+> Outro
+SONG END
+Paper Satellites
+> Verse {C G Am F}
+STOP
 ```
 
----
+Place each locator at its intended beat; this example is a naming guide, not an audio file. [Full setup and locator guide →](docs/GETTING_STARTED.md)
 
-### 2. Setting Up `ableton-js` Remote Script in Ableton Live
+### Compatibility
 
-The backend communicates with Ableton Live via UDP using `ableton-js`'s MIDI Remote Script.
+| Target | Download | Status |
+| --- | --- | --- |
+| macOS, Apple Silicon | arm64 DMG / ZIP | Local packaged smoke testing; real-hardware acceptance tracked separately |
+| macOS, Intel | x64 DMG / ZIP | CI build and smoke gate; not locally verified |
+| Windows, x64 | NSIS installer | CI build and smoke gate; clean-machine acceptance pending |
+| Ableton Live 12 | Bundled AbletonJS 4.1.0 | Intended compatibility target; see acceptance record |
+| Live 11 / Linux | — | Unverified / not supported by this alpha |
 
-#### Step 1: Install the MIDI Remote Script
-1. Locate your Ableton Live **MIDI Remote Scripts** directory:
-   - **macOS**: `/Applications/Ableton Live [Version].app/Contents/App-Resources/MIDI Remote Scripts/`
-   - **Windows**: `C:\ProgramData\Ableton\Live [Version]\Resources\MIDI Remote Scripts\`
-2. Download or copy the `AbletonJS` folder from [ableton-js-midi-script](https://github.com/leoluca/ableton-js-midi-script).
-3. Place the `AbletonJS` folder inside the `MIDI Remote Scripts` directory.
+Unsigned downloads may prompt OS warnings. Verify the release checksum and source before following your OS’s documented approval process. macOS may require **System Settings → Privacy & Security → Open Anyway** after an initial blocked launch; managed computers may prohibit unsigned apps. Do not disable system protections globally. Windows may show an unknown-publisher warning.
 
-#### Step 2: Enable in Ableton Live Preferences
-1. Open Ableton Live.
-2. Go to **Preferences** -> **Link / Tempo / MIDI**.
-3. Under **Control Surface**, select **AbletonJS** from the dropdown menu.
-4. Set **Input** and **Output** to `None` (the script communicates internally via UDP loopback port `9001`).
+### Phones and tablets
 
----
+Enable **Local network access** in Settings, restart the desktop app, and scan its QR code from a device on the same trusted Wi-Fi. Keep the server off the public internet. Wake Lock and clipboard capabilities depend on the browser and secure-context rules; ordinary LAN HTTP is not a full offline PWA.
 
-## 🛠️ Quick Start & Installation
+## Develop and test
 
-### Prerequisites
-- **Node.js**: v20.0.0 or higher (v22 recommended)
-- **npm**: v10.0.0 or higher
-- **Ableton Live**: 10, 11, or 12 with `AbletonJS` Remote Script enabled
+Use Node 24 and npm. The lockfile is the source of dependency versions.
 
-### Installation
-
-```bash
-# Clone repository
-git clone https://github.com/joohnnyvv/alive-set-manager.git
-cd alive-set-manager
-
-# Install dependencies
-npm install
+```sh
+npm ci
+npm run dev             # frontend: http://localhost:5173
+npm run typecheck
+npm test                # isolated storage, no Live or MIDI hardware required
+npm run build
+npx playwright install chromium
+npm run test:e2e        # real backend + simulated Live/MIDI
+npm run pack:mac        # macOS application bundle, never publishes
 ```
 
-### Running the App
+`npm run demo` serves the built UI at `http://127.0.0.1:4173` with temporary sample data. `npm run screenshots` refreshes the gallery. Desktop setup and update controls are available only in Electron.
 
-```bash
-# Start backend server & frontend Vite dev server concurrently
-npm run dev
-```
+[Development and test guide](docs/DEVELOPMENT.md) · [Release process](docs/RELEASING.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-Output:
-```text
-==================================================
- AbleSet Controller Server running on port 8080
- Local access: http://localhost:8080
- Mobile access: http://192.168.1.100:8080
-==================================================
-```
+## License and acknowledgments
 
-Open **`http://localhost:8080`** on your computer, or **`http://<YOUR_LOCAL_IP>:8080`** on phones/tablets connected to the same Wi-Fi network.
+Alive Set Manager is released under the [ISC license](LICENSE). It uses [AbletonJS by Leo Bernard](https://github.com/leolabs/ableton-js), Electron, Solid, native MIDI/RtMidi, and other open-source components. The app bundles complete third-party notices and a generated dependency inventory. [License review and generation details](docs/LICENSES.md)
 
----
-
-## 📜 NPM Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Runs backend (with auto-reload) and Vite frontend concurrently. |
-| `npm run build` | Compiles backend TypeScript and builds production frontend bundle (`dist/`). |
-| `npm test` | Runs the automated Node test suite (20 tests covering parser, setlist engine, jump modes, MIDI, and safety guards). |
-| `npm run typecheck` | Runs `tsc --noEmit` to verify strict TypeScript compilation. |
-
----
-
-## 🧪 Testing
-
-The project includes an automated unit and integration test suite:
-
-```bash
-npm test
-```
-
-Tests cover:
-- Locator parser & section chord progression extraction
-- Setlist engine & playhead boundary detection
-- Lookahead timekeeper scheduler & jump state machine
-- Jump modes & pre-activation timing
-- Song stop behaviors (`auto-jump`, `stop`, `pause`)
-- Setlist JSON persistence & plain text import/export
-- MIDI Engine & Smart GO Button logic
-- Code audit ensuring zero raw `startPlaying()` / `stopPlaying()` calls exist
-
----
-
-## 📱 Mobile Stage Tips
-
-1. **Keep Screen Awake**: Go to **Settings** view in the web app and click **Enable Screen Lock** (`navigator.wakeLock`).
-2. **Add to Home Screen**: On iOS Safari or Android Chrome, select "Add to Home Screen" for full-screen PWA mode.
-3. **Stage High Contrast**: The interface automatically defaults to stage high-contrast dark theme with color-coded section tiles.
-
----
-
-## 📄 License
-
-ISC License.
+Independent project; not affiliated with or endorsed by Ableton or AbleSet. Ableton Live is required and is not included.
