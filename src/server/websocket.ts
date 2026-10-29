@@ -226,15 +226,14 @@ export class WsServer {
 
       case 'setlist.save':
         const setlistState = this.setlistEngine.getSetlistState();
-        await this.setlistStorage.save(action.name, setlistState.order, this.setlistEngine.getSongOverrides());
+        await this.setlistStorage.save(action.name, setlistState.order, this.setlistEngine.getSongOverrides(), this.setlistEngine.getSavedDuplicates());
         this.broadcast({ type: 'setlist.saved', payload: { name: action.name } });
         break;
 
       case 'setlist.load':
         const loaded = await this.setlistStorage.load(action.name);
         if (loaded) {
-          this.setlistEngine.reorder(loaded.order);
-          this.setlistEngine.applySongOverrides(loaded.songOverrides);
+          this.setlistEngine.restoreSavedSetlist(loaded);
           this.broadcastUpdatedSetlist();
         }
         break;

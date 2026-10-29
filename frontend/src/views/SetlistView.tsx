@@ -20,6 +20,8 @@ export default function SetlistView() {
   const [saveName, setSaveName] = createSignal('');
   const [loadFiles, setLoadFiles] = createSignal<string[]>([]);
   const [selectedLoadFile, setSelectedLoadFile] = createSignal('');
+  const [confirmDelete, setConfirmDelete] = createSignal(false);
+  const [deletingSetlist, setDeletingSetlist] = createSignal(false);
   const [importText, setImportText] = createSignal('');
 
   let draggedId: string | null = null;
@@ -67,6 +69,33 @@ export default function SetlistView() {
     setShowEditModal(false);
   };
 
+  const deleteSelectedSetlist = async () => {
+    const name = selectedLoadFile();
+    if (!name || deletingSetlist()) return;
+    if (!confirmDelete()) {
+      setConfirmDelete(true);
+      return;
+    }
+    setDeletingSetlist(true);
+    try {
+      const response = await apiFetch('/api/setlist/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!response.ok) throw new Error('Delete failed');
+      const remaining = loadFiles().filter(file => file !== name);
+      setLoadFiles(remaining);
+      setSelectedLoadFile(remaining[0] ?? '');
+      setConfirmDelete(false);
+      showToast(`Deleted setlist "${name}"`, 'success');
+    } catch {
+      showToast('Failed to delete setlist. Please try again.', 'error');
+    } finally {
+      setDeletingSetlist(false);
+    }
+  };
+
   return (
     <div class="view setlist-view">
       <div class="view-header">
@@ -75,6 +104,9 @@ export default function SetlistView() {
           <button class="btn btn-primary" onClick={() => setShowAddModal(true)}>Add Song</button>
           <button class="btn btn-secondary" onClick={() => { setSaveName(''); setShowSaveModal(true); }}>Save</button>
           <button class="btn btn-secondary" onClick={() => {
+            setConfirmDelete(false);
+            setSelectedLoadFile('');
+            setLoadFiles([]);
             setShowLoadModal(true);
             apiFetch('/api/setlist/files')
               .then((res) => res.json())
@@ -304,20 +336,29 @@ export default function SetlistView() {
               <button class="btn-icon modal-close" onClick={() => setShowLoadModal(false)}>✕</button>
             </div>
             <div class="modal-body" style={{ display: 'flex', 'flex-direction': 'column', gap: '14px' }}>
-              <Show when={loadFiles().length > 0} fallback={<div class="empty-search">No saved setlists found on server</div>}>
+              <Show when={loadFiles().length > 0} fallback={<div class="empty-search">No saved setlists found</div>}>
                 <select
                   class="select-input"
                   value={selectedLoadFile()}
-                  onChange={(e) => setSelectedLoadFile(e.currentTarget.value)}
+                  disabled={deletingSetlist()}
+                  aria-label="Saved setlist"
+                  onChange={(e) => { setSelectedLoadFile(e.currentTarget.value); setConfirmDelete(false); }}
                 >
                   <For each={loadFiles()}>
                     {(file) => <option value={file}>{file}</option>}
                   </For>
                 </select>
+                <Show when={confirmDelete()}>
+                  <p role="alert">Delete saved setlist "{selectedLoadFile()}" permanently? Your current setlist will stay open.</p>
+                </Show>
                 <div style={{ display: 'flex', 'justify-content': 'flex-end', gap: '10px' }}>
-                  <button class="btn btn-secondary" onClick={() => setShowLoadModal(false)}>Cancel</button>
+                  <button class="btn btn-secondary" disabled={deletingSetlist()} onClick={deleteSelectedSetlist}>
+                    {deletingSetlist() ? 'Deleting…' : confirmDelete() ? 'Confirm Delete' : 'Delete'}
+                  </button>
+                  <button class="btn btn-secondary" disabled={deletingSetlist()} onClick={() => { setConfirmDelete(false); setShowLoadModal(false); }}>Cancel</button>
                   <button
                     class="btn btn-primary"
+                    disabled={deletingSetlist() || confirmDelete()}
                     onClick={() => {
                       if (selectedLoadFile()) {
                         dispatch({ type: 'setlist.load', name: selectedLoadFile() });

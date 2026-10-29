@@ -1,3 +1,4 @@
+import type { SavedSetlistFile } from '../storage/setlist.js';
 import { Song, Section, Setlist, StopBehavior, ParsedLocator } from '../types/index.js';
 import { parseLocator } from '../parsers/locator.js';
 import { RawCuePoint } from '../ableton/bridge.js';
@@ -311,13 +312,13 @@ export class SetlistEngine {
     }
   }
 
-  public duplicateSong(songId: string): Song | undefined {
+  public duplicateSong(songId: string, savedId?: string): Song | undefined {
     const originalSong = this.songs.find(s => s.id === songId);
     if (!originalSong) return undefined;
 
     const baseId = originalSong.originalId || originalSong.id;
     const dupIndex = Date.now() + Math.floor(Math.random() * 1000);
-    const newId = `${baseId}_dup_${dupIndex}`;
+    const newId = savedId ?? `${baseId}_dup_${dupIndex}`;
 
     const dupSong: Song = {
       ...originalSong,
@@ -365,9 +366,10 @@ export class SetlistEngine {
     return this.songs.find(s => s.id === songId);
   }
 
-  public updateSongOverride(songId: string, overrides: { color?: string; stopBehavior?: StopBehavior; duration?: number }): void {
+  public updateSongOverride(songId: string, overrides: { color?: string; stopBehavior?: StopBehavior; duration?: number; isSkipped?: boolean }): void {
     const song = this.songs.find(s => s.id === songId);
     if (song) {
+      if (overrides.isSkipped !== undefined) song.isSkipped = overrides.isSkipped;
       if (overrides.color !== undefined) song.color = overrides.color;
       if (overrides.stopBehavior !== undefined) song.stopBehavior = overrides.stopBehavior;
       if (overrides.duration !== undefined) {
@@ -377,20 +379,40 @@ export class SetlistEngine {
     }
   }
 
-  public getSongOverrides(): Record<string, { color?: string; stopBehavior?: StopBehavior; duration?: number }> {
+  public getSongOverrides(): Record<string, { color?: string; stopBehavior?: StopBehavior; duration?: number; isSkipped?: boolean }> {
     return Object.fromEntries(this.songs
-      .filter(song => song.color !== undefined || song.stopBehavior !== 'default' || song.durationOverride !== undefined)
       .map(song => [song.id, {
+        isSkipped: song.isSkipped ?? false,
         color: song.color,
         stopBehavior: song.stopBehavior,
         duration: song.durationOverride,
       }]));
   }
 
-  public applySongOverrides(overrides: Record<string, { color?: string; stopBehavior?: StopBehavior; duration?: number }> = {}): void {
+  public applySongOverrides(overrides: Record<string, { color?: string; stopBehavior?: StopBehavior; duration?: number; isSkipped?: boolean }> = {}): void {
     for (const [songId, values] of Object.entries(overrides)) {
       this.updateSongOverride(songId, values);
     }
+  }
+
+  public getSavedDuplicates(): Record<string, string> {
+    return Object.fromEntries(this.songs
+      .filter(song => song.isDuplicate && song.originalId)
+      .map(song => [song.id, song.originalId!]));
+  }
+
+  public restoreSavedSetlist(saved: SavedSetlistFile): void {
+    // Recreate rows before resolving their IDs in the saved order.
+    this.songs = this.songs.filter(song => !song.isDuplicate);
+    this.order = this.order.filter(id => this.songs.some(song => song.id === id));
+    this.activeSongId = undefined;
+    this.activeSectionId = undefined;
+    this.clearQueue();
+    for (const [id, originalId] of Object.entries(saved.duplicates ?? {})) {
+      if (!this.getSongById(id)) this.duplicateSong(originalId, id);
+    }
+    this.reorder(saved.order);
+    this.applySongOverrides(saved.songOverrides);
   }
 
   public importFromText(text: string): void {
