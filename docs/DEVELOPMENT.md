@@ -6,7 +6,7 @@ Use Node 24 (`nvm use`) and `npm ci`. Start development with `npm run dev`, then
 
 - `npm run typecheck`: backend and frontend TypeScript.
 - `npm test`: unit and real HTTP/WebSocket integration tests with temporary data. MIDI discovery is simulated; no Live connection is opened.
-- `npm run build`: generated assets/notices/SBOM, backend compilation and frontend bundle.
+- `npm run build`: explicitly installs the pinned Electron runtime when missing, then generates assets/notices/SBOM, compiles the backend and bundles the frontend. Electron 43 does not download its runtime during `npm ci`; the build must do this before collecting Chromium notices.
 - `npm run test:e2e`: Chromium against the real server and simulated Live/MIDI.
 - `npm run test:electron`: desktop smoke test; set `ASM_EXECUTABLE` to a packaged executable to test a distribution.
 - `npm run verify:package`: inspect packaged archives for required resources, native addons and accidentally included development tools.
