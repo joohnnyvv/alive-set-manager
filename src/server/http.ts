@@ -4,7 +4,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import { SetlistEngine } from '../engine/setlist.js';
-import { AbletonBridge } from '../ableton/bridge.js';
+import type { LiveAdapter } from '../ableton/bridge.js';
 import { SettingsStorage } from '../storage/settings.js';
 import { SetlistStorage } from '../storage/setlist.js';
 import { PlaybackState } from '../types/index.js';
@@ -47,7 +47,7 @@ export function isOriginAllowed(origin: string | undefined): boolean {
 
 export function createHttpServer(
   setlistEngine: SetlistEngine,
-  abletonBridge: AbletonBridge,
+  abletonBridge: LiveAdapter,
   settingsStorage: SettingsStorage,
   setlistStorage: SetlistStorage,
   getPlaybackState: () => PlaybackState,
@@ -82,27 +82,9 @@ export function createHttpServer(
     next();
   });
 
-  // Static files for production build (supports local dev, node dist, packaged Electron .app, and asarUnpack)
-  const baseDir = __dirname.includes('app.asar.unpacked')
-    ? __dirname
-    : __dirname.replace('app.asar', 'app.asar.unpacked');
-
-  const possiblePaths = [
-    path.resolve(baseDir, '../../../frontend/dist'),
-    path.resolve(baseDir, '../../frontend/dist'),
-    path.resolve(__dirname, '../../../frontend/dist'),
-    path.resolve(__dirname, '../../frontend/dist'),
-    path.resolve(__dirname, '../frontend'),
-    path.resolve(process.cwd(), 'frontend', 'dist'),
-    path.resolve(process.cwd(), 'dist', 'frontend'),
-  ];
-
-  possiblePaths.forEach(p => {
-    console.log(`[HttpServer Debug] Checking static path "${p}": exists = ${fs.existsSync(p)}`);
-  });
-
-  const staticPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
-  console.log('[HttpServer] Serving static frontend from:', staticPath);
+  const root = __dirname.endsWith(`${path.sep}dist${path.sep}src${path.sep}server`)
+    ? path.resolve(__dirname, '../../..') : path.resolve(__dirname, '../..');
+  const staticPath = path.join(root, 'frontend', 'dist');
 
   app.use(express.static(staticPath));
 
@@ -113,11 +95,12 @@ export function createHttpServer(
     const isPlaying = abletonBridge.isPlaying();
     const setlist = setlistEngine.getSetlistState(tempo, currentTime, isPlaying);
     const playback = getPlaybackState();
-    const settings = settingsStorage.getSettings();
+    const settings = settingsStorage.publicSettings();
     const midiDevices = midiEngine ? midiEngine.getDevices() : { inputs: [], outputs: [] };
     const midiMappings = midiEngine ? midiEngine.getMappings() : [];
 
     res.json({
+      liveConnected: abletonBridge.isConnected?.() ?? false,
       setlist,
       playback,
       settings,
@@ -196,17 +179,17 @@ export function createHttpServer(
 
   app.get('/api/ips', (req: Request, res: Response) => {
     const ips = getLocalIpAddresses();
-    res.json({ ips, port: settingsStorage.getSettings().preferredPort || 8080 });
+    res.json({ ips, port: req.socket.localPort || 8080 });
   });
 
   app.get('/api/settings', (req: Request, res: Response) => {
-    res.json(settingsStorage.getSettings());
+    res.json(settingsStorage.publicSettings());
   });
 
   app.post('/api/settings', async (req: Request, res: Response) => {
     try {
       const updated = await settingsStorage.updateSettings(req.body);
-      res.json(updated);
+      res.json(settingsStorage.publicSettings());
     } catch (err: any) {
       res.status(400).json({ error: err.message || 'Invalid settings payload' });
     }

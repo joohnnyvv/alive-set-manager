@@ -1,11 +1,11 @@
 import easymidi from 'easymidi';
 import fs from 'fs/promises';
 import path from 'path';
-import os from 'os';
+import { dataDirectory, atomicJson, readJson } from '../storage/files.js';
 import { MidiMapping, MidiAction, MidiMessageType } from '../types/index.js';
 
 function getStorageDir(): string {
-  return path.join(os.homedir(), '.ableset');
+  return dataDirectory();
 }
 
 function getDefaultMidiFilePath(): string {
@@ -198,58 +198,16 @@ export class MidiEngine {
     return [...this.mappings];
   }
 
-  private async ensureDir(): Promise<void> {
-    try {
-      const dir = path.dirname(this.storageFilePath);
-      await fs.mkdir(dir, { recursive: true });
-    } catch (err) {
-      console.error('[MidiEngine] Error creating directory:', err);
-    }
-  }
-
   public async loadMappings(): Promise<void> {
-    try {
-      await this.ensureDir();
-      let data = '';
-      try {
-        data = await fs.readFile(this.storageFilePath, 'utf-8');
-      } catch {
-        // Fallback to legacy process.cwd()/midi-mappings.json if primary does not exist
-        const legacyPath = path.join(process.cwd(), 'midi-mappings.json');
-        if (this.storageFilePath === getDefaultMidiFilePath()) {
-          try {
-            data = await fs.readFile(legacyPath, 'utf-8');
-            // Migrate to persistent primary file
-            await fs.writeFile(this.storageFilePath, data, 'utf-8');
-            console.log(`[MidiEngine] Migrated legacy MIDI mappings from ${legacyPath} to ${this.storageFilePath}`);
-          } catch {
-            this.mappings = [];
-            return;
-          }
-        } else {
-          this.mappings = [];
-          return;
-        }
-      }
-
-      this.mappings = JSON.parse(data);
-      if (!Array.isArray(this.mappings)) {
-        this.mappings = [];
-      }
-      console.log(`[MidiEngine] Loaded ${this.mappings.length} MIDI mappings from ${this.storageFilePath}`);
-    } catch (err) {
-      console.warn('[MidiEngine] Failed to load MIDI mappings:', err);
-      this.mappings = [];
+    const value = await readJson(this.storageFilePath);
+    if (value === undefined) { this.mappings = []; return; }
+    if (!Array.isArray(value) || !value.every(m => m && typeof m.id === 'string' && typeof m.action?.type === 'string')) {
+      throw new Error('Invalid saved MIDI mappings. Original file retained.');
     }
+    this.mappings = value;
   }
 
   public async saveMappings(): Promise<void> {
-    try {
-      await this.ensureDir();
-      await fs.writeFile(this.storageFilePath, JSON.stringify(this.mappings, null, 2), 'utf-8');
-      console.log(`[MidiEngine] Saved ${this.mappings.length} MIDI mappings to ${this.storageFilePath}`);
-    } catch (err) {
-      console.error('[MidiEngine] Failed to save MIDI mappings:', err);
-    }
+    await atomicJson(this.storageFilePath, this.mappings);
   }
 }

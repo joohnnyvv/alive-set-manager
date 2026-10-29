@@ -25,10 +25,18 @@ export class AbletonBridge {
   constructor() {
     this.ableton = new Ableton();
     this.setupConnectionEvents();
-    this.startHealthCheck();
+
+  }
+
+  public async close(): Promise<void> {
+    clearInterval(this.healthCheckInterval);
+    this.cuePointCallbacks = [];
+    this.isPlayingCallbacks = [];
+    await this.ableton.close();
   }
 
   public async start(): Promise<void> {
+    this.startHealthCheck();
     try {
       await this.ableton.start(2000);
       this.isConnectedState = true;
@@ -311,3 +319,5 @@ export class AbletonBridge {
     }
   }
 }
+
+export type LiveAdapter = Pick<AbletonBridge, "start" | "close" | "isConnected" | "isPlaying" | "isLooping" | "getCurrentSongTime" | "getTempo" | "getRawCuePoints" | "onCuePointsChanged" | "onIsPlayingChanged" | "safePlay" | "safeStop" | "pause" | "setSongTime" | "jumpToCue" | "jumpToTime" | "setLoop">;

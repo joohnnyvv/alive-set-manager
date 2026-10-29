@@ -1,0 +1,95 @@
+name: Verify
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  quality:
+    name: Quality and browser tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - run: npm ci
+      - run: npm audit --audit-level=moderate
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: browser-failures
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+  package:
+    name: Package (${{ matrix.id }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15, id: mac-arm64, target: mac, arch: arm64 }
+          - { os: macos-15-intel, id: mac-x64, target: mac, arch: x64 }
+          - { os: windows-2022, id: win-x64, target: win, arch: x64 }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx electron-builder --${{ matrix.target }} --${{ matrix.arch }} --publish never
+      - run: npm run verify:package
+      - name: Packaged Electron smoke
+        run: |
+          if [ '${{ matrix.target }}' = mac ]; then
+            export ASM_EXECUTABLE="$PWD/dist-app/mac${{ matrix.arch == 'arm64' && '-arm64' || '' }}/Alive Set Manager.app/Contents/MacOS/Alive Set Manager"
+          else
+            export ASM_EXECUTABLE="$PWD/dist-app/win-unpacked/Alive Set Manager.exe"
+          fi
+          npm run test:electron
+      - name: Collect notices
+        run: |
+          cp resources/sbom.json dist-app/sbom-${{ matrix.id }}.json
+          cp resources/THIRD_PARTY_NOTICES.txt dist-app/notices-${{ matrix.id }}.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-${{ matrix.id }}
+          path: |
+            dist-app/*.dmg
+            dist-app/*.zip
+            dist-app/*.exe
+            dist-app/sbom-*.json
+            dist-app/notices-*.txt
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: desktop-failures-${{ matrix.id }}
+          path: test-results/
