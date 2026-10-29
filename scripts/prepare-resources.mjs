@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { createHash } from 'node:crypto';
+import { spawn } from 'node:child_process';
 const root = process.cwd();
 const pkg = JSON.parse(await fs.readFile('package.json'));
 const lock = JSON.parse(await fs.readFile('package-lock.json'));
@@ -51,7 +52,17 @@ if (!(await fs.readFile(path.join(output, 'AbletonJS/version.py'), 'utf8')).incl
 notices.push(`\nAbletonJS Remote Script ${abletonVersion}: covered by the ableton-js MIT notice above.\n`);
 await fs.writeFile(path.join(output, 'THIRD_PARTY_NOTICES.txt'), notices.join('\n'));
 await fs.writeFile(path.join(output, 'sbom.json'), JSON.stringify({ bomFormat: 'CycloneDX', specVersion: '1.5', version: 1, metadata: { component: { type: 'application', name: pkg.name, version: pkg.version } }, components }, null, 2));
-await fs.copyFile('node_modules/electron/dist/LICENSES.chromium.html', path.join(output, 'LICENSES.chromium.html'));
+const chromiumNoticesSource = 'node_modules/electron/dist/LICENSES.chromium.html';
+try {
+  await fs.access(chromiumNoticesSource);
+} catch {
+  await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['node_modules/electron/install.js'], { stdio: 'inherit' });
+    child.once('error', reject);
+    child.once('exit', code => code === 0 ? resolve() : reject(new Error(`electron install script failed with exit code ${code}`)));
+  });
+}
+await fs.copyFile(chromiumNoticesSource, path.join(output, 'LICENSES.chromium.html'));
 await fs.copyFile(path.join(output, 'THIRD_PARTY_NOTICES.txt'), 'frontend/public/licenses/THIRD_PARTY_NOTICES.txt');
 await fs.copyFile(path.join(output, 'LICENSES.chromium.html'), 'frontend/public/licenses/LICENSES.chromium.html');
 const svg = await fs.readFile('resources/icon.svg');
