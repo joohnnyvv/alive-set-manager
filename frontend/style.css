@@ -152,7 +152,7 @@ body {
 #app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -351,11 +351,34 @@ body {
 /* =========================================================
    Setlist View & Song Rows (High Readability & Clear Focus)
    ========================================================= */
+.app-content-setlist {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.setlist-view {
+  height: 100%;
+  min-height: 0;
+}
+
+.setlist-view > .view-header,
+.setlist-view > .setlist-footer {
+  flex-shrink: 0;
+}
+
 .setlist-container {
   display: flex;
   flex-direction: column;
   gap: 8px;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+
+.setlist-container > * {
+  flex-shrink: 0;
 }
 
 .song-item {

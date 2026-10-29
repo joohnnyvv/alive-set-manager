@@ -23,6 +23,8 @@ describe('Jump Engine', () => {
 
     const mockBridge = {
       isPlaying: () => playing,
+      isLooping: () => false,
+      setLoop: async () => {},
       getCurrentSongTime: () => currentSongTime,
       getTempo: () => 120,
       jumpToCue: async (id: string) => { jumpedCueId = id; },
@@ -65,6 +67,8 @@ describe('Jump Engine', () => {
 
     const mockBridge = {
       isPlaying: () => true,
+      isLooping: () => false,
+      setLoop: async () => {},
       getCurrentSongTime: () => 10,
       getTempo: () => 120,
     } as any;
@@ -100,6 +104,8 @@ describe('Jump Engine', () => {
 
     const mockBridge = {
       isPlaying: () => playing,
+      isLooping: () => false,
+      setLoop: async () => {},
       getCurrentSongTime: () => 0,
       getTempo: () => 120,
       jumpToCue: async (id: string) => { jumpedCueId = id; },
@@ -126,6 +132,8 @@ describe('Jump Engine', () => {
     let jumpedId = '';
     const mockBridge = {
       isPlaying: () => true,
+      isLooping: () => false,
+      setLoop: async () => {},
       getCurrentSongTime: () => 5,
       getTempo: () => 120,
       jumpToCue: async (id: string) => { jumpedId = id; },

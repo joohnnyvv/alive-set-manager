@@ -5,13 +5,10 @@ export function showToast(message: string, type: 'info' | 'error' | 'success' = 
     toastContainer.id = 'toast-container';
     document.body.appendChild(toastContainer);
   }
-
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.textContent = message;
-
   toastContainer.appendChild(toast);
-
   setTimeout(() => {
     toast.classList.add('toast-fade');
     setTimeout(() => toast.remove(), 300);

@@ -252,3 +252,66 @@ describe('Setlist Engine', () => {
   });
 
 });
+
+
+describe('saved setlist restoration', () => {
+  const cues = [
+    { id: 'song1', name: 'First Song', time: 0 },
+    { id: 'section1', name: '> Intro', time: 4 },
+    { id: 'song2', name: 'Second Song', time: 32 },
+  ];
+
+  test('restores duplicate rows, their order, and independent disabled states after restart', () => {
+    const original = new SetlistEngine();
+    original.buildSetlistFromCues(cues);
+    const duplicate = original.duplicateSong('song1')!;
+    const disabledDuplicate = original.duplicateSong(duplicate.id)!;
+    original.removeSong('song1');
+    original.updateSongOverride(disabledDuplicate.id, { isSkipped: true, color: 'blue', duration: 45 });
+    original.reorder(['song2', duplicate.id, 'song1', disabledDuplicate.id]);
+    const saved = JSON.parse(JSON.stringify({
+      version: 2, name: 'Tour', createdAt: new Date().toISOString(),
+      order: original.getSetlistState().order,
+      songOverrides: original.getSongOverrides(),
+      duplicates: original.getSavedDuplicates(),
+    }));
+
+    const restored = new SetlistEngine();
+    restored.buildSetlistFromCues(cues);
+    restored.restoreSavedSetlist(saved);
+    assert.deepEqual(restored.getSetlistState().order, saved.order);
+    assert.equal(restored.getSongById('song1')?.isSkipped, true);
+    assert.equal(restored.getSongById(duplicate.id)?.isSkipped, false);
+    assert.equal(restored.getSongById(disabledDuplicate.id)?.isSkipped, true);
+    assert.equal(restored.getSongById(disabledDuplicate.id)?.durationOverride, 45);
+    assert.equal(restored.getSongById(disabledDuplicate.id)?.color, 'blue');
+    const section = restored.getSongById(duplicate.id)!.sections[0];
+    assert.equal(section.originalId, 'section1');
+    assert.equal(restored.getSectionById(section.id)?.song.id, duplicate.id);
+
+    restored.buildSetlistFromCues(cues);
+    assert.deepEqual(restored.getSetlistState().order, saved.order);
+    assert.equal(restored.getSongById('song1')?.isSkipped, true);
+    restored.restoreSavedSetlist(saved);
+    assert.equal(restored.getSetlistState().songs.length, 4);
+  });
+
+  test('restores enabled states and removes duplicates from a previously loaded setlist', () => {
+    const engine = new SetlistEngine();
+    engine.buildSetlistFromCues(cues);
+    const songOverrides = engine.getSongOverrides();
+    engine.duplicateSong('song1');
+    engine.removeSong('song2');
+    engine.restoreSavedSetlist({ version: 2, name: 'Clean', createdAt: '', order: ['song1', 'song2'], songOverrides });
+    assert.equal(engine.getSetlistState().songs.length, 2);
+    assert.equal(engine.getSongById('song2')?.isSkipped, false);
+  });
+
+  test('still reads legacy files without duplicate or disabled metadata', () => {
+    const engine = new SetlistEngine();
+    engine.buildSetlistFromCues(cues);
+    engine.restoreSavedSetlist({ version: 1, name: 'Legacy', createdAt: '', order: ['song2', 'song1'], songOverrides: { song1: { color: 'red' } } });
+    assert.deepEqual(engine.getSetlistState().order, ['song2', 'song1']);
+    assert.equal(engine.getSongById('song1')?.color, 'red');
+  });
+});

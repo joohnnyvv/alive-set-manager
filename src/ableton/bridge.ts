@@ -13,6 +13,7 @@ export class AbletonBridge {
   public ableton: Ableton;
   private isConnectedState = false;
   private isPlayingState = false;
+  private isLoopingState = false;
   private currentSongTimeState = 0;
   private tempoState = 120;
   private rawCuePoints: RawCuePoint[] = [];
@@ -62,6 +63,7 @@ export class AbletonBridge {
         const playing = await this.ableton.song.get('is_playing');
         const time = await this.ableton.song.get('current_song_time');
         const tempo = await this.ableton.song.get('tempo');
+        const looping = await this.ableton.song.get('loop');
 
         if (!this.isConnectedState) {
           logInfo('AbletonBridge', 'Auto-detected active Ableton Live session!');
@@ -74,6 +76,7 @@ export class AbletonBridge {
         this.isPlayingState = playing;
         this.currentSongTimeState = time;
         this.tempoState = tempo;
+        this.isLoopingState = !!looping;
 
         if (wasPlaying !== playing) {
           console.log(`[AbletonBridge] State sync: is_playing changed to ${playing}`);
@@ -188,6 +191,10 @@ export class AbletonBridge {
     return this.tempoState;
   }
 
+  public isLooping(): boolean {
+    return this.isLoopingState;
+  }
+
   /**
    * ⭐ CRITICAL: Always use safeStartPlaying() to prevent arrangement jump to start bug.
    */
@@ -298,6 +305,7 @@ export class AbletonBridge {
         await this.ableton.song.set('loop_length', lengthBeats);
       }
       await this.ableton.song.set('loop', enabled);
+      this.isLoopingState = enabled;
     } catch (err) {
       console.error('[AbletonBridge] Error setting loop state:', err);
     }

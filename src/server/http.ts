@@ -146,7 +146,7 @@ export function createHttpServer(
       return;
     }
     const setlist = setlistEngine.getSetlistState();
-    await setlistStorage.save(name.trim(), setlist.order);
+    await setlistStorage.save(name.trim(), setlist.order, setlistEngine.getSongOverrides(), setlistEngine.getSavedDuplicates());
     res.json({ success: true, name: name.trim() });
   });
 
@@ -161,8 +161,27 @@ export function createHttpServer(
       res.status(404).json({ error: 'Setlist not found' });
       return;
     }
-    setlistEngine.reorder(loaded.order);
+    setlistEngine.restoreSavedSetlist(loaded);
     res.json({ success: true, loaded });
+  });
+
+  app.delete('/api/setlist/delete', async (req: Request, res: Response) => {
+    const { name } = req.body ?? {};
+    if (typeof name !== 'string' || !name.trim()) {
+      res.status(400).json({ error: 'Valid setlist name is required' });
+      return;
+    }
+    try {
+      const deleted = await setlistStorage.delete(name);
+      if (!deleted) {
+        res.status(404).json({ error: 'Setlist not found' });
+        return;
+      }
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[SetlistStorage] Failed to delete setlist:', err);
+      res.status(500).json({ error: 'Failed to delete setlist' });
+    }
   });
 
   app.get('/api/setlist/files', async (req: Request, res: Response) => {

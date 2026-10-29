@@ -132,6 +132,9 @@ export class JumpEngine {
   }
 
   public async executeSongJump(song: Song): Promise<void> {
+    if (this.settingsStorage.getSettings().disableLoopWhenJumping && this.abletonBridge.isLooping()) {
+      await this.abletonBridge.setLoop(false);
+    }
     this.setlistEngine.setActiveSongId(song.id);
     const targetCueId = song.originalId || song.id;
     console.log(`[JumpEngine] Executing song jump to "${song.name}" (cue id: ${targetCueId})`);
@@ -139,6 +142,9 @@ export class JumpEngine {
   }
 
   public async executeSectionJump(section: Section): Promise<void> {
+    if (this.settingsStorage.getSettings().disableLoopWhenJumping && this.abletonBridge.isLooping()) {
+      await this.abletonBridge.setLoop(false);
+    }
     const target = this.setlistEngine.getSectionById(section.id);
     if (target) {
       this.setlistEngine.setActiveSongId(target.song.id);
