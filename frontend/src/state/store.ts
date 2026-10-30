@@ -191,6 +191,10 @@ export const setView = (view: AppState['currentView']) => {
   setStore('currentView', view);
 };
 
+export const showStartupHelp = () => {
+  if (!viewChosen) setView('help');
+};
+
 export const applyTheme = (theme: string) => {
   setStore('settings', 'theme', theme as any);
   localStorage.setItem('app-theme', theme);

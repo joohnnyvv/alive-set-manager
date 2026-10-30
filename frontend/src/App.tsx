@@ -1,6 +1,6 @@
 import { Component, For, onMount, onCleanup } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
-import { store, setView, connection } from './state/store.js';
+import { store, setView, showStartupHelp, connection } from './state/store.js';
 import SetlistView from './views/SetlistView.js';
 import PerformanceView from './views/PerformanceView.js';
 import SectionsView from './views/SectionsView.js';
@@ -22,7 +22,7 @@ const App: Component = () => {
     if (!window.desktop) return;
     const dispose = window.desktop.onHelp(() => setView('help'));
     onCleanup(dispose);
-    void window.desktop.info().then(info => { if (!info.setupComplete) setView('help'); });
+    void window.desktop.info().then(info => { if (!info.setupComplete) showStartupHelp(); });
   });
   const navItems = [
     { view: 'setlist' as const, label: 'Setlist' },

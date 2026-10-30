@@ -279,8 +279,15 @@ export default function SettingsView() {
               id="default-view-select"
               class="select-input"
               value={store.settings.defaultView || 'setlist'}
-              onChange={(e) => {
-                dispatch({ type: 'settings.set', key: 'defaultView', value: e.currentTarget.value });
+              onChange={async (e) => {
+                const value = e.currentTarget.value;
+                try {
+                  // Choosing a startup view also dismisses the first-run Help override.
+                  await window.desktop?.finishSetup();
+                  dispatch({ type: 'settings.set', key: 'defaultView', value });
+                } catch {
+                  showToast('Could not save the startup preference. Please try again.', 'error');
+                }
               }}
             >
               <option value="setlist">Setlist View</option>
