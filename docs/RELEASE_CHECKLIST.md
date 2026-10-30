@@ -1,6 +1,6 @@
 # Alpha acceptance record
 
-Target: 0.1.0-alpha.1. Date: 2026-10-29. A checked automated test is not a certification of physical hardware or a published download.
+Target: 0.1.0-alpha.2. Date: 2026-10-30. A checked automated test is not a certification of physical hardware or a published download.
 
 ## Verified locally
 
