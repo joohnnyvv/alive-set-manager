@@ -1,6 +1,6 @@
 # Alpha acceptance record
 
-Target: 0.1.0-alpha.1. Date: 2026-10-29. A checked automated test is not a certification of physical hardware or a published download.
+Target: 0.1.0-alpha.2. Date: 2026-10-30. A checked automated test is not a certification of physical hardware or a published download.
 
 ## Verified locally
 
@@ -18,16 +18,16 @@ Target: 0.1.0-alpha.1. Date: 2026-10-29. A checked automated test is not a certi
 ## Must be completed before public release
 
 - [x] GitHub master branch protection configured with all four required checks; dependency alerts and security fixes enabled.
-- [ ] GitHub workflows run on the pushed implementation.
-- [ ] Node 24 clean-install verification in CI (local build host currently uses Node 22.16).
-- [ ] Downloaded macOS arm64 DMG installs on a clean account; Dock/Finder icons checked.
+- [x] GitHub workflows run on the pushed implementation.
+- [x] Node 24 clean-install verification in CI (local build host currently uses Node 22.16).
+- [x] Downloaded macOS arm64 DMG installs on a clean account; Dock/Finder icons checked.
 - [ ] macOS Intel build, smoke and clean-account installation.
 - [ ] Windows x64 build, smoke, installer/uninstaller and native MIDI loading.
 - [ ] First-run installation on fresh/custom/redirected User Libraries with Live 12 on each OS.
 - [ ] Real Live transport, all queued jump modes, counted loops and reconnect acceptance.
 - [ ] Physical MIDI Learn and mapped controller actions.
 - [ ] Real phone/tablet LAN pairing, firewall behavior and browser capability limits.
-- [ ] Previous-app replacement preserves settings, saved setlists and MIDI mappings.
+- [x] Previous-app replacement preserves settings, saved setlists and MIDI mappings.
 - [ ] Complete rehearsal-length session without unsafe playback, data loss or crashes.
 - [ ] All draft assets, checksum list and per-platform license inventories reviewed.
 
