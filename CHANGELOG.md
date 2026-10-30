@@ -4,6 +4,15 @@ User-facing changes are curated here. Versions follow semantic versioning; alpha
 
 ## [Unreleased]
 
+## [0.1.0-alpha.2] — 2026-10-30
+
+### Fixed
+
+- The saved default startup view is now honored after choosing it in Settings, even if first-run setup was not explicitly dismissed. A delayed setup check no longer overrides navigation.
+- Updated dependencies to fix security vulnerabilities.
+
+### Known limitations
+
 - Signed/notarized beta distribution and automatic update installation remain gated on credentials and acceptance testing.
 
 ## [0.1.0-alpha.1] — 2026-10-29

@@ -12,7 +12,7 @@
 
 A desktop setlist controller for **Ableton Live 12**, with a companion interface for phones and tablets on your local network. Arrange songs, see section chords, queue transitions, and map a MIDI pedal without losing sight of the performance.
 
-> **First alpha in preparation.** Download links will become usable when the first draft is published. Builds are not publisher-signed or notarized. Rehearse and keep backups; this is not yet certified for unattended stage use. See the [acceptance record](docs/RELEASE_CHECKLIST.md) for what has actually been tested.
+> **Alpha software.** Builds are not publisher-signed or notarized. Rehearse and keep backups; this is not yet certified for unattended stage use. See the [acceptance record](docs/RELEASE_CHECKLIST.md) for what has actually been tested.
 
 ## Made for the set
 
@@ -53,6 +53,8 @@ All screenshots use the same original demo arrangement and actual application UI
 4. In Live’s **Settings → Link, Tempo & MIDI**, choose **AbletonJS** as a Control Surface, with Input and Output set to **None**. Restart Live if necessary.
 5. Add song and section locators to your arrangement. The app reports its own connection and Live’s connection separately.
 
+Choose **Settings → Default View on App Start** to open Setlist, Stage / Performance, or Sections on future launches. Choosing a default also dismisses first-run setup; setup remains available from Help.
+
 ```text
 Northern Lights {Key: F#m} [blue]
 > Intro {F#m D A E}
@@ -74,7 +76,7 @@ Place each locator at its intended beat; this example is a naming guide, not an 
 | macOS, Apple Silicon | arm64 DMG / ZIP | Local packaged smoke testing; real-hardware acceptance tracked separately |
 | macOS, Intel | x64 DMG / ZIP | CI build and smoke gate; not locally verified |
 | Windows, x64 | NSIS installer | CI build and smoke gate; clean-machine acceptance pending |
-| Ableton Live 12 | Bundled AbletonJS 4.1.0 | Intended compatibility target; see acceptance record |
+| Ableton Live 12 | Bundled AbletonJS (version shown in Help) | Intended compatibility target; see acceptance record |
 | Live 11 / Linux | — | Unverified / not supported by this alpha |
 
 Unsigned downloads may prompt OS warnings. Verify the release checksum and source before following your OS’s documented approval process. macOS may require **System Settings → Privacy & Security → Open Anyway** after an initial blocked launch; managed computers may prohibit unsigned apps. Do not disable system protections globally. Windows may show an unknown-publisher warning.
