@@ -4,13 +4,14 @@ import os from 'node:os';
 import path from 'node:path';
 test('packaged desktop boots, exposes safe setup, reloads and preserves preferences', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(),'alive-electron-'));
+  const bundledVersion = JSON.parse(await fs.readFile(path.join('node_modules', 'ableton-js', 'package.json'), 'utf8')).version;
   const executablePath = process.env.ASM_EXECUTABLE;
   const launch = () => electron.launch({ executablePath, args: executablePath ? [] : ['.'], env: {...process.env, ASM_DATA_DIR:directory, ASM_DEMO:'1'} });
   let app = await launch();
   try {
     let page = await app.firstWindow();
     await expect(page.getByRole('heading',{name:'Ready for your next set.'})).toBeVisible();
-    await expect(page.getByText('Bundled version:',{exact:false})).toContainText('4.1.0');
+    await expect(page.getByText('Bundled version:',{exact:false})).toContainText(bundledVersion);
     await page.getByRole('button',{name:'Done / skip setup'}).click();
     expect(await page.evaluate(()=>typeof (window as any).require)).toBe('undefined');
     // Load the native addon in Electron, without accessing physical MIDI ports.
