@@ -1,6 +1,4 @@
-import fs from 'fs/promises';
 import path from 'path';
-import os from 'os';
 import { AppSettings } from '../types/index.js';
 
 import { dataDirectory, atomicJson, readJson } from './files.js';
@@ -18,7 +16,13 @@ const defaultSettings: AppSettings = {
 };
 
 const VALID_THEMES = new Set(['midnight', 'live-dark', 'live-light', 'high-contrast', 'soft-dark']);
-const VALID_JUMP_MODES = new Set(['quantized', 'end-of-section', 'end-of-song', 'dynamic', 'manual']);
+const VALID_JUMP_MODES = new Set([
+  'quantized',
+  'end-of-section',
+  'end-of-song',
+  'dynamic',
+  'manual',
+]);
 const VALID_DEFAULT_VIEWS = new Set(['setlist', 'performance', 'sections']);
 
 export interface ValidationResult {
@@ -70,7 +74,9 @@ export function validateSettingsPayload(payload: unknown): ValidationResult {
         if (typeof val === 'string' && VALID_JUMP_MODES.has(val)) {
           sanitized.jumpMode = val as any;
         } else {
-          errors.push(`Invalid jumpMode: "${val}". Must be one of: ${[...VALID_JUMP_MODES].join(', ')}`);
+          errors.push(
+            `Invalid jumpMode: "${val}". Must be one of: ${[...VALID_JUMP_MODES].join(', ')}`,
+          );
         }
         break;
       case 'autoJumpToNextSong':
@@ -89,7 +95,9 @@ export function validateSettingsPayload(payload: unknown): ValidationResult {
         if (typeof val === 'string' && VALID_DEFAULT_VIEWS.has(val)) {
           sanitized.defaultView = val as any;
         } else {
-          errors.push(`Invalid defaultView: "${val}". Must be one of: ${[...VALID_DEFAULT_VIEWS].join(', ')}`);
+          errors.push(
+            `Invalid defaultView: "${val}". Must be one of: ${[...VALID_DEFAULT_VIEWS].join(', ')}`,
+          );
         }
         break;
       case 'preferredPort':
@@ -123,7 +131,10 @@ export class SettingsStorage {
 
   public async load(): Promise<AppSettings> {
     const loaded = await readJson(path.join(this.directory, 'settings.json'));
-    if (loaded === undefined) { await this.save(); return this.settings; }
+    if (loaded === undefined) {
+      await this.save();
+      return this.settings;
+    }
     const validation = validateSettingsPayload(loaded);
     if (!validation.valid) throw new Error('Invalid saved settings. Original file retained.');
     this.settings = { ...defaultSettings, ...validation.sanitized };
@@ -143,7 +154,10 @@ export class SettingsStorage {
     return this.settings;
   }
 
-  public async updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]): Promise<AppSettings> {
+  public async updateSetting<K extends keyof AppSettings>(
+    key: K,
+    value: AppSettings[K],
+  ): Promise<AppSettings> {
     const validation = validateSettingsPayload({ [key]: value });
     if (!validation.valid) {
       throw new Error(`Validation failed for setting "${key}": ${validation.errors.join(', ')}`);

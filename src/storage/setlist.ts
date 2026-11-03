@@ -13,13 +13,14 @@ export interface SavedSetlistFile {
   createdAt: string;
   order: string[];
   duplicates?: Record<string, string>;
-  songOverrides?: Record<string, { color?: string; stopBehavior?: StopBehavior; duration?: number; isSkipped?: boolean }>;
+  songOverrides?: Record<
+    string,
+    { color?: string; stopBehavior?: StopBehavior; duration?: number; isSkipped?: boolean }
+  >;
 }
 
 export class SetlistStorage {
-  constructor(private readonly directory = getSetlistsDir()) {
-
-  }
+  constructor(private readonly directory = getSetlistsDir()) {}
 
   private async ensureDir(): Promise<void> {
     await fs.mkdir(this.directory, { recursive: true });
@@ -29,14 +30,19 @@ export class SetlistStorage {
     await this.ensureDir();
     try {
       const files = await fs.readdir(this.directory);
-      return files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
+      return files.filter((f) => f.endsWith('.json')).map((f) => f.replace('.json', ''));
     } catch (err) {
       console.error('[SetlistStorage] Error listing setlists:', err);
       return [];
     }
   }
 
-  public async save(name: string, order: string[], overrides?: SavedSetlistFile['songOverrides'], duplicates?: Record<string, string>): Promise<void> {
+  public async save(
+    name: string,
+    order: string[],
+    overrides?: SavedSetlistFile['songOverrides'],
+    duplicates?: Record<string, string>,
+  ): Promise<void> {
     await this.ensureDir();
     const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_');
     const filePath = path.join(this.directory, `${safeName}.json`);
@@ -77,10 +83,21 @@ export class SetlistStorage {
 
 export function validSetlist(value: unknown): value is SavedSetlistFile {
   const v = value as SavedSetlistFile;
-  return !!v && [1, 2].includes(v.version) && typeof v.name === 'string'
-    && Array.isArray(v.order) && v.order.every(id => typeof id === 'string')
-    && (!v.duplicates || Object.values(v.duplicates).every(id => typeof id === 'string'))
-    && (!v.songOverrides || Object.values(v.songOverrides).every(o => o && typeof o === 'object'
-      && (o.duration === undefined || (Number.isFinite(o.duration) && o.duration > 0))
-      && (o.stopBehavior === undefined || ['default', 'auto-jump', 'stop', 'pause'].includes(o.stopBehavior))));
+  return (
+    !!v &&
+    [1, 2].includes(v.version) &&
+    typeof v.name === 'string' &&
+    Array.isArray(v.order) &&
+    v.order.every((id) => typeof id === 'string') &&
+    (!v.duplicates || Object.values(v.duplicates).every((id) => typeof id === 'string')) &&
+    (!v.songOverrides ||
+      Object.values(v.songOverrides).every(
+        (o) =>
+          o &&
+          typeof o === 'object' &&
+          (o.duration === undefined || (Number.isFinite(o.duration) && o.duration > 0)) &&
+          (o.stopBehavior === undefined ||
+            ['default', 'auto-jump', 'stop', 'pause'].includes(o.stopBehavior)),
+      ))
+  );
 }

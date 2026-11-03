@@ -4,7 +4,6 @@ import { PlaybackTracker } from './playback.js';
 import { SetlistEngine } from './setlist.js';
 
 describe('Playback Tracker', () => {
-
   test('calculates song progress, section progress, and remaining time accurately', () => {
     let isPlayingVal = true;
     let currentTimeVal = 16;
@@ -62,7 +61,7 @@ describe('Playback Tracker', () => {
       mockBridge,
       engine,
       (songId) => songChanges.push(songId),
-      (secId) => sectionChanges.push(secId)
+      (secId) => sectionChanges.push(secId),
     );
 
     // Initial tick at beat 0
@@ -96,5 +95,4 @@ describe('Playback Tracker', () => {
     assert.equal(state.isPlaying, false);
     assert.equal(state.isPaused, true);
   });
-
 });

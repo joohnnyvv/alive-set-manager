@@ -2,7 +2,7 @@ import { SetlistEngine } from './setlist.js';
 import type { LiveAdapter } from '../ableton/bridge.js';
 import { Timekeeper } from './timekeeper.js';
 import { SettingsStorage } from '../storage/settings.js';
-import { Song, Section, JumpMode } from '../types/index.js';
+import { Song, Section } from '../types/index.js';
 
 export class JumpEngine {
   private queuedTarget?: { songId?: string; sectionId?: string; isSong: boolean };
@@ -13,7 +13,7 @@ export class JumpEngine {
     private abletonBridge: LiveAdapter,
     private timekeeper: Timekeeper,
     private settingsStorage: SettingsStorage,
-    private onQueueChanged?: (songId?: string, sectionId?: string) => void
+    private onQueueChanged?: (songId?: string, sectionId?: string) => void,
   ) {}
 
   public async requestSongJump(songId: string): Promise<void> {
@@ -27,7 +27,9 @@ export class JumpEngine {
 
     const isPlaying = this.abletonBridge.isPlaying();
     const jumpMode = this.settingsStorage.getSettings().jumpMode;
-    console.log(`[JumpEngine] requestSongJump: "${song.name}" (isPlaying: ${isPlaying}, jumpMode: ${jumpMode})`);
+    console.log(
+      `[JumpEngine] requestSongJump: "${song.name}" (isPlaying: ${isPlaying}, jumpMode: ${jumpMode})`,
+    );
 
     if (!isPlaying || jumpMode === 'quantized') {
       await this.executeSongJump(song);
@@ -116,7 +118,10 @@ export class JumpEngine {
       } else if (active.song) {
         targetBoundaryBeats = active.song.endTime;
       }
-    } else if (jumpMode === 'end-of-song' || (jumpMode === 'dynamic' && this.queuedTarget?.isSong)) {
+    } else if (
+      jumpMode === 'end-of-song' ||
+      (jumpMode === 'dynamic' && this.queuedTarget?.isSong)
+    ) {
       // Jump at end of active song
       if (active.song) {
         targetBoundaryBeats = active.song.endTime;
@@ -132,7 +137,10 @@ export class JumpEngine {
   }
 
   public async executeSongJump(song: Song): Promise<void> {
-    if (this.settingsStorage.getSettings().disableLoopWhenJumping && this.abletonBridge.isLooping()) {
+    if (
+      this.settingsStorage.getSettings().disableLoopWhenJumping &&
+      this.abletonBridge.isLooping()
+    ) {
       await this.abletonBridge.setLoop(false);
     }
     this.setlistEngine.setActiveSongId(song.id);
@@ -142,7 +150,10 @@ export class JumpEngine {
   }
 
   public async executeSectionJump(section: Section): Promise<void> {
-    if (this.settingsStorage.getSettings().disableLoopWhenJumping && this.abletonBridge.isLooping()) {
+    if (
+      this.settingsStorage.getSettings().disableLoopWhenJumping &&
+      this.abletonBridge.isLooping()
+    ) {
       await this.abletonBridge.setLoop(false);
     }
     const target = this.setlistEngine.getSectionById(section.id);
@@ -150,7 +161,9 @@ export class JumpEngine {
       this.setlistEngine.setActiveSongId(target.song.id);
     }
     const targetCueId = section.originalId || section.id;
-    console.log(`[JumpEngine] Executing section jump to "${section.name}" (cue id: ${targetCueId})`);
+    console.log(
+      `[JumpEngine] Executing section jump to "${section.name}" (cue id: ${targetCueId})`,
+    );
     await this.abletonBridge.jumpToCue(targetCueId);
   }
 

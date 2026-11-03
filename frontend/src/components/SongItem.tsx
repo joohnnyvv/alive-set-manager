@@ -55,7 +55,9 @@ const SongItem: Component<SongItemProps> = (props) => {
       <div class="song-header" onClick={handleHeaderClick}>
         {/* Title Box */}
         <div class="song-title-box">
-          <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
+          <span class="drag-handle" title="Drag to reorder">
+            ⋮⋮
+          </span>
           <span class="song-number">{props.song.isNonSong ? '—' : `${props.index + 1}.`}</span>
           <span class="song-name">{props.song.name}</span>
 

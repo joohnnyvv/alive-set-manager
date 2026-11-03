@@ -70,7 +70,11 @@ export function parseLocator(rawName: string, time: number): ParsedLocator {
     str = str.replace(/\[\d+:\d+\]/, '').trim();
   } else {
     const durSecMatch = str.match(/\[(\d+)s?\]/);
-    if (durSecMatch && !isNaN(parseInt(durSecMatch[1], 10)) && !isColorName(durSecMatch[1])) {
+    if (
+      durSecMatch &&
+      !Number.isNaN(parseInt(durSecMatch[1], 10)) &&
+      !isColorName(durSecMatch[1])
+    ) {
       duration = parseInt(durSecMatch[1], 10);
       str = str.replace(/\[\d+s?\]/, '').trim();
     }
@@ -196,15 +200,19 @@ export function isChordProgression(str: string): boolean {
   if (trimmed.length === 0) return false;
   if (/^(?:chords?|ch|c)\s*:/i.test(trimmed)) return true;
 
-  const tokens = trimmed.split(/[\s\-\|,\/>]+/).filter(t => t.length > 0);
+  const tokens = trimmed.split(/[\s\-\|,\/>]+/).filter((t) => t.length > 0);
   if (tokens.length === 0) return false;
 
   const chordRegex = /^[A-Ga-g][#b]?(?:m|maj|min|dim|aug|sus|add|\d)*(?:\/[A-Ga-g][#b]?)?$/;
-  const validCount = tokens.filter(t => chordRegex.test(t)).length;
+  const validCount = tokens.filter((t) => chordRegex.test(t)).length;
   return validCount > 0 && validCount >= Math.ceil(tokens.length * 0.75);
 }
 
-function extractTargetTempo(tags: string[], description?: string, rawName?: string): number | undefined {
+function extractTargetTempo(
+  tags: string[],
+  description?: string,
+  rawName?: string,
+): number | undefined {
   // 1. Check tags (e.g. #140bpm, #bpm140, #140)
   for (const tag of tags) {
     const match = tag.match(/^(?:bpm)?(\d+)(?:bpm)?$/i);
@@ -216,7 +224,8 @@ function extractTargetTempo(tags: string[], description?: string, rawName?: stri
 
   // 2. Check description (e.g. {bpm:140} or {140bpm})
   if (description) {
-    const match = description.match(/(?:bpm[:\s]*)?(\d+)\s*bpm/i) || description.match(/bpm[:\s]*(\d+)/i);
+    const match =
+      description.match(/(?:bpm[:\s]*)?(\d+)\s*bpm/i) || description.match(/bpm[:\s]*(\d+)/i);
     if (match) {
       const bpm = parseInt(match[1], 10);
       if (bpm >= 40 && bpm <= 300) return bpm;
@@ -225,7 +234,8 @@ function extractTargetTempo(tags: string[], description?: string, rawName?: stri
 
   // 3. Check rawName (e.g. [140bpm] or [bpm:140])
   if (rawName) {
-    const match = rawName.match(/\[(?:bpm[:\s]*)?(\d+)\s*bpm\]/i) || rawName.match(/\[bpm[:\s]*(\d+)\]/i);
+    const match =
+      rawName.match(/\[(?:bpm[:\s]*)?(\d+)\s*bpm\]/i) || rawName.match(/\[bpm[:\s]*(\d+)\]/i);
     if (match) {
       const bpm = parseInt(match[1], 10);
       if (bpm >= 40 && bpm <= 300) return bpm;
@@ -250,6 +260,21 @@ function createEmptyFlags(): LocatorFlags {
 }
 
 function isColorName(str: string): boolean {
-  const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet', 'purple', 'pink', 'gray', 'grey', 'cyan', 'teal', 'amber'];
+  const colors = [
+    'red',
+    'orange',
+    'yellow',
+    'green',
+    'blue',
+    'indigo',
+    'violet',
+    'purple',
+    'pink',
+    'gray',
+    'grey',
+    'cyan',
+    'teal',
+    'amber',
+  ];
   return colors.includes(str.toLowerCase());
 }

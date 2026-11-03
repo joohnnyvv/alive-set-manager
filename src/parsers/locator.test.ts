@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { parseLocator, isChordProgression } from './locator.js';
 
 describe('Locator Parser', () => {
-
   test('extracts song and section boundaries with descriptions', () => {
     const loc1 = parseLocator('Song Alpha {Tuning: E}', 0);
     assert.equal(loc1.type, 'song');
@@ -105,5 +104,4 @@ describe('Locator Parser', () => {
     assert.equal(loc.duration, 150);
     assert.equal(loc.transitionTarget, 'NextSection');
   });
-
 });

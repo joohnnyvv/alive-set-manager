@@ -1,4 +1,8 @@
-export function showToast(message: string, type: 'info' | 'error' | 'success' = 'info', duration: number = 3000): void {
+export function showToast(
+  message: string,
+  type: 'info' | 'error' | 'success' = 'info',
+  duration: number = 3000,
+): void {
   let toastContainer = document.getElementById('toast-container');
   if (!toastContainer) {
     toastContainer = document.createElement('div');

@@ -4,13 +4,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 describe('Ableton Bridge & Safety Wrappers', () => {
-
   test('verifies no raw startPlaying() or stopPlaying() calls exist in codebase', async () => {
     const srcDir = path.join(process.cwd(), 'src');
     const files = await getFilesRecursively(srcDir);
 
     for (const file of files) {
-      if (!file.endsWith('.ts') || file.endsWith('.test.ts') || file.endsWith('bridge.ts')) continue;
+      if (!file.endsWith('.ts') || file.endsWith('.test.ts') || file.endsWith('bridge.ts'))
+        continue;
       const content = await fs.readFile(file, 'utf-8');
 
       // Ensure no raw startPlaying() or stopPlaying() without "safe" prefix
@@ -21,7 +21,6 @@ describe('Ableton Bridge & Safety Wrappers', () => {
       assert.equal(hasRawStop, false, `Raw stopPlaying() found in ${file}`);
     }
   });
-
 });
 
 async function getFilesRecursively(dir: string): Promise<string[]> {

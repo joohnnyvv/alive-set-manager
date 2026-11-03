@@ -23,7 +23,7 @@ export class WsServer {
     private setlistStorage: SetlistStorage,
     private jumpEngine: JumpEngine,
     private getPlaybackState: () => PlaybackState,
-    private midiEngine?: MidiEngine
+    private midiEngine?: MidiEngine,
   ) {
     this.wss = new WebSocketServer({
       server,
@@ -39,8 +39,12 @@ export class WsServer {
         // 2. Auth token verification if configured
         const settings = this.settingsStorage.getSettings();
         if (settings.authToken) {
-          const reqUrl = new URL(info.req.url || '', `http://${info.req.headers.host || 'localhost'}`);
-          const token = reqUrl.searchParams.get('token') || (info.req.headers['x-auth-token'] as string);
+          const reqUrl = new URL(
+            info.req.url || '',
+            `http://${info.req.headers.host || 'localhost'}`,
+          );
+          const token =
+            reqUrl.searchParams.get('token') || (info.req.headers['x-auth-token'] as string);
           if (token !== settings.authToken) {
             logWarn('WS', `Rejected connection with invalid or missing auth token`);
             callback(false, 401, 'Unauthorized');
@@ -51,7 +55,7 @@ export class WsServer {
         callback(true);
       },
     });
-    this.wss.on('error', error => logError('WS', 'Server error', error));
+    this.wss.on('error', (error) => logError('WS', 'Server error', error));
     this.setupWss();
   }
 
@@ -69,10 +73,10 @@ export class WsServer {
           setlist: this.setlistEngine.getSetlistState(
             this.abletonBridge.getTempo(),
             this.abletonBridge.getCurrentSongTime(),
-            this.abletonBridge.isPlaying()
+            this.abletonBridge.isPlaying(),
           ),
           liveConnected: this.abletonBridge.isConnected?.() ?? false,
-        playback: this.getPlaybackState(),
+          playback: this.getPlaybackState(),
           settings: this.settingsStorage.publicSettings(),
           midi: {
             inputs: devices.inputs,
@@ -226,19 +230,26 @@ export class WsServer {
         this.broadcastUpdatedSetlist();
         break;
 
-      case 'setlist.save':
+      case 'setlist.save': {
         const setlistState = this.setlistEngine.getSetlistState();
-        await this.setlistStorage.save(action.name, setlistState.order, this.setlistEngine.getSongOverrides(), this.setlistEngine.getSavedDuplicates());
+        await this.setlistStorage.save(
+          action.name,
+          setlistState.order,
+          this.setlistEngine.getSongOverrides(),
+          this.setlistEngine.getSavedDuplicates(),
+        );
         this.broadcast({ type: 'setlist.saved', payload: { name: action.name } });
         break;
+      }
 
-      case 'setlist.load':
+      case 'setlist.load': {
         const loaded = await this.setlistStorage.load(action.name);
         if (loaded) {
           this.setlistEngine.restoreSavedSetlist(loaded);
           this.broadcastUpdatedSetlist();
         }
         break;
+      }
 
       case 'settings.set':
         try {
@@ -248,7 +259,7 @@ export class WsServer {
             payload: {
               setlist: this.setlistEngine.getSetlistState(),
               liveConnected: this.abletonBridge.isConnected?.() ?? false,
-        playback: this.getPlaybackState(),
+              playback: this.getPlaybackState(),
               settings: this.settingsStorage.publicSettings(),
             },
           });
@@ -301,7 +312,10 @@ export class WsServer {
     const state = this.getPlaybackState();
     const queued = this.jumpEngine.getQueuedTarget();
 
-    logInfo('GO', `GO Button pressed (isPlaying: ${state.isPlaying}, queued: ${JSON.stringify(queued)}, isLooping: ${state.isLooping})`);
+    logInfo(
+      'GO',
+      `GO Button pressed (isPlaying: ${state.isPlaying}, queued: ${JSON.stringify(queued)}, isLooping: ${state.isLooping})`,
+    );
 
     if (state.isPlaying && queued) {
       logInfo('GO', 'Executing queued jump immediately');
@@ -324,15 +338,18 @@ export class WsServer {
 
   public async handleNextSong(): Promise<void> {
     const setlist = this.getSetlistCurrentState();
-    const activeSongs = setlist.songs.filter(s => !s.isSkipped);
+    const activeSongs = setlist.songs.filter((s) => !s.isSkipped);
     if (activeSongs.length === 0) return;
 
     const currentTime = this.abletonBridge.getCurrentSongTime();
-    let currentIdx = activeSongs.findIndex(s => s.id === setlist.activeSongId);
+    let currentIdx = activeSongs.findIndex((s) => s.id === setlist.activeSongId);
 
     if (currentIdx === -1) {
       for (let i = 0; i < activeSongs.length; i++) {
-        if (currentTime >= activeSongs[i].startTime - 0.01 && currentTime < activeSongs[i].endTime - 0.01) {
+        if (
+          currentTime >= activeSongs[i].startTime - 0.01 &&
+          currentTime < activeSongs[i].endTime - 0.01
+        ) {
           currentIdx = i;
           break;
         }
@@ -365,18 +382,21 @@ export class WsServer {
 
   public async handlePrevSong(): Promise<void> {
     const setlist = this.getSetlistCurrentState();
-    const activeSongs = setlist.songs.filter(s => !s.isSkipped);
+    const activeSongs = setlist.songs.filter((s) => !s.isSkipped);
     if (activeSongs.length === 0) return;
 
     const currentTime = this.abletonBridge.getCurrentSongTime();
     const isPlaying = this.abletonBridge.isPlaying();
     const settings = this.settingsStorage.getSettings();
 
-    let currentIdx = activeSongs.findIndex(s => s.id === setlist.activeSongId);
+    let currentIdx = activeSongs.findIndex((s) => s.id === setlist.activeSongId);
 
     if (currentIdx === -1) {
       for (let i = 0; i < activeSongs.length; i++) {
-        if (currentTime >= activeSongs[i].startTime - 0.01 && currentTime < activeSongs[i].endTime - 0.01) {
+        if (
+          currentTime >= activeSongs[i].startTime - 0.01 &&
+          currentTime < activeSongs[i].endTime - 0.01
+        ) {
           currentIdx = i;
           break;
         }
@@ -401,7 +421,10 @@ export class WsServer {
       const tempo = setlist.tempo || 120;
       const elapsedSeconds = (elapsedInSong / tempo) * 60;
 
-      if ((isPlaying && elapsedSeconds > 3) || (settings.restartSongBeforeJumpingBack && elapsedSeconds > 1)) {
+      if (
+        (isPlaying && elapsedSeconds > 3) ||
+        (settings.restartSongBeforeJumpingBack && elapsedSeconds > 1)
+      ) {
         logInfo('PrevSong', `Restarting current song "${currentSong.name}"`);
         await this.jumpEngine.requestSongJump(currentSong.id);
       } else if (currentIdx > 0) {
@@ -423,14 +446,17 @@ export class WsServer {
     const active = this.setlistEngine.getActiveSongAndSection(currentTime);
     if (!active.song || active.song.sections.length === 0) return;
 
-    const sections = active.song.sections.filter(sec => !sec.flags.skip);
+    const sections = active.song.sections.filter((sec) => !sec.flags.skip);
     if (sections.length === 0) return;
 
-    let curIdx = sections.findIndex(sec => sec.id === active.section?.id);
+    let curIdx = sections.findIndex((sec) => sec.id === active.section?.id);
 
     if (curIdx === -1) {
       for (let i = 0; i < sections.length; i++) {
-        if (currentTime >= sections[i].startTime - 0.01 && currentTime < sections[i].endTime - 0.01) {
+        if (
+          currentTime >= sections[i].startTime - 0.01 &&
+          currentTime < sections[i].endTime - 0.01
+        ) {
           curIdx = i;
           break;
         }
@@ -451,14 +477,17 @@ export class WsServer {
     const active = this.setlistEngine.getActiveSongAndSection(currentTime);
     if (!active.song || active.song.sections.length === 0) return;
 
-    const sections = active.song.sections.filter(sec => !sec.flags.skip);
+    const sections = active.song.sections.filter((sec) => !sec.flags.skip);
     if (sections.length === 0) return;
 
-    let curIdx = sections.findIndex(sec => sec.id === active.section?.id);
+    let curIdx = sections.findIndex((sec) => sec.id === active.section?.id);
 
     if (curIdx === -1) {
       for (let i = 0; i < sections.length; i++) {
-        if (currentTime >= sections[i].startTime - 0.01 && currentTime < sections[i].endTime - 0.01) {
+        if (
+          currentTime >= sections[i].startTime - 0.01 &&
+          currentTime < sections[i].endTime - 0.01
+        ) {
           curIdx = i;
           break;
         }
@@ -517,20 +546,21 @@ export class WsServer {
         this.broadcastFullState();
         break;
 
-      case 'toggle-loop':
+      case 'toggle-loop': {
         const isLoop = (this.getPlaybackState() as any).isLooping;
         await this.abletonBridge.setLoop(!isLoop);
         this.broadcastFullState();
         break;
+      }
 
       case 'cancel-queue':
         this.jumpEngine.cancelQueue();
         this.broadcastFullState();
         break;
 
-      case 'jump-to-song':
+      case 'jump-to-song': {
         const setlist = this.getSetlistCurrentState();
-        const activeSongs = setlist.songs.filter(s => !s.isSkipped);
+        const activeSongs = setlist.songs.filter((s) => !s.isSkipped);
         const songIdx = (action as any).songIndex;
         if (typeof songIdx === 'number' && songIdx >= 0 && songIdx < activeSongs.length) {
           await this.jumpEngine.requestSongJump(activeSongs[songIdx].id);
@@ -539,17 +569,26 @@ export class WsServer {
         }
         this.broadcastFullState();
         break;
+      }
 
-      case 'jump-to-section':
-        const active = this.setlistEngine.getActiveSongAndSection(this.abletonBridge.getCurrentSongTime());
+      case 'jump-to-section': {
+        const active = this.setlistEngine.getActiveSongAndSection(
+          this.abletonBridge.getCurrentSongTime(),
+        );
         const secIdx = (action as any).sectionIndex;
-        if (active.song && typeof secIdx === 'number' && secIdx >= 0 && secIdx < active.song.sections.length) {
+        if (
+          active.song &&
+          typeof secIdx === 'number' &&
+          secIdx >= 0 &&
+          secIdx < active.song.sections.length
+        ) {
           await this.jumpEngine.requestSectionJump(active.song.sections[secIdx].id);
         } else if ((action as any).sectionId) {
           await this.jumpEngine.requestSectionJump((action as any).sectionId);
         }
         this.broadcastFullState();
         break;
+      }
 
       default:
         console.warn('[WsServer] Unhandled MIDI action:', (action as any).type);
@@ -564,7 +603,7 @@ export class WsServer {
         setlist: this.setlistEngine.getSetlistState(
           this.abletonBridge.getTempo(),
           this.abletonBridge.getCurrentSongTime(),
-          this.abletonBridge.isPlaying()
+          this.abletonBridge.isPlaying(),
         ),
         liveConnected: this.abletonBridge.isConnected?.() ?? false,
         playback: this.getPlaybackState(),
@@ -582,14 +621,14 @@ export class WsServer {
     const state = this.setlistEngine.getSetlistState(
       this.abletonBridge.getTempo(),
       this.abletonBridge.getCurrentSongTime(),
-      this.abletonBridge.isPlaying()
+      this.abletonBridge.isPlaying(),
     );
     this.broadcast({ type: 'setlist.updated', payload: state });
   }
 
   public async close(): Promise<void> {
     for (const client of this.clients) client.terminate();
-    await new Promise<void>(resolve => this.wss.close(() => resolve()));
+    await new Promise<void>((resolve) => this.wss.close(() => resolve()));
   }
 
   public broadcast(event: ServerEvent): void {

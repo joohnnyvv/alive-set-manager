@@ -1,7 +1,5 @@
 import { Ableton } from 'ableton-js';
-import { ParsedLocator } from '../types/index.js';
-import { parseLocator } from '../parsers/locator.js';
-import { logInfo, logWarn, logError } from '../utils/logger.js';
+import { logInfo, logWarn } from '../utils/logger.js';
 
 export interface RawCuePoint {
   id: string;
@@ -25,7 +23,6 @@ export class AbletonBridge {
   constructor() {
     this.ableton = new Ableton();
     this.setupConnectionEvents();
-
   }
 
   public async close(): Promise<void> {
@@ -43,8 +40,11 @@ export class AbletonBridge {
       logInfo('AbletonBridge', 'Connected to Ableton Live.');
       await this.setupListeners();
       await this.refreshState();
-    } catch (err) {
-      logWarn('AbletonBridge', 'Ableton Live not detected on startup. Auto-retry health check active...');
+    } catch {
+      logWarn(
+        'AbletonBridge',
+        'Ableton Live not detected on startup. Auto-retry health check active...',
+      );
       this.isConnectedState = false;
     }
   }
@@ -92,9 +92,11 @@ export class AbletonBridge {
             cb(playing);
           }
         }
-      } catch (err) {
+      } catch {
         if (this.isConnectedState) {
-          console.warn('[AbletonBridge] Health check query failed. Ableton may be closed or unready.');
+          console.warn(
+            '[AbletonBridge] Health check query failed. Ableton may be closed or unready.',
+          );
           this.isConnectedState = false;
         }
       }
@@ -262,9 +264,13 @@ export class AbletonBridge {
     if (!this.isConnectedState) return;
     try {
       const cues = await this.ableton.song.get('cue_points');
-      const targetCue = cues.find(c => String(c.raw.id) === String(cueId) || c.raw.name === cueId);
+      const targetCue = cues.find(
+        (c) => String(c.raw.id) === String(cueId) || c.raw.name === cueId,
+      );
       if (targetCue) {
-        console.log(`[AbletonBridge] Jumping to cue: ${targetCue.raw.name} (id: ${targetCue.raw.id})`);
+        console.log(
+          `[AbletonBridge] Jumping to cue: ${targetCue.raw.name} (id: ${targetCue.raw.id})`,
+        );
         await targetCue.jump();
         const cueTime = await targetCue.get('time');
         this.currentSongTimeState = cueTime;
@@ -320,4 +326,23 @@ export class AbletonBridge {
   }
 }
 
-export type LiveAdapter = Pick<AbletonBridge, "start" | "close" | "isConnected" | "isPlaying" | "isLooping" | "getCurrentSongTime" | "getTempo" | "getRawCuePoints" | "onCuePointsChanged" | "onIsPlayingChanged" | "safePlay" | "safeStop" | "pause" | "setSongTime" | "jumpToCue" | "jumpToTime" | "setLoop">;
+export type LiveAdapter = Pick<
+  AbletonBridge,
+  | 'start'
+  | 'close'
+  | 'isConnected'
+  | 'isPlaying'
+  | 'isLooping'
+  | 'getCurrentSongTime'
+  | 'getTempo'
+  | 'getRawCuePoints'
+  | 'onCuePointsChanged'
+  | 'onIsPlayingChanged'
+  | 'safePlay'
+  | 'safeStop'
+  | 'pause'
+  | 'setSongTime'
+  | 'jumpToCue'
+  | 'jumpToTime'
+  | 'setLoop'
+>;

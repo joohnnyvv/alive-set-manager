@@ -5,19 +5,20 @@ import { getBackendPort, getAuthToken } from './http.js';
 export class WsClient {
   private ws?: WebSocket;
   private reconnectInterval = 3000;
-  private isConnecting = false;
 
   constructor(
     private onMessage: (event: ServerEvent) => void,
-    private onStatusChange: (status: 'connected' | 'disconnected' | 'connecting') => void
+    private onStatusChange: (status: 'connected' | 'disconnected' | 'connecting') => void,
   ) {}
 
   public connect(): void {
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+    if (
+      this.ws &&
+      (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)
+    ) {
       return;
     }
 
-    this.isConnecting = true;
     this.onStatusChange('connecting');
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -34,7 +35,6 @@ export class WsClient {
 
     this.ws.onopen = () => {
       logWsRx('Connected to server!');
-      this.isConnecting = false;
       this.onStatusChange('connected');
     };
 
@@ -52,7 +52,6 @@ export class WsClient {
 
     this.ws.onclose = () => {
       logWsRx('Connection closed. Retrying in 3s...');
-      this.isConnecting = false;
       this.onStatusChange('disconnected');
       setTimeout(() => this.connect(), this.reconnectInterval);
     };

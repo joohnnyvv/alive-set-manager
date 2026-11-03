@@ -57,7 +57,9 @@ let receivedInitialState = false;
 let viewChosen = false;
 
 export const [store, setStore] = createStore<AppState>(initialState);
-export const [connection, setConnection] = createSignal<'connected' | 'disconnected' | 'connecting'>('connecting');
+export const [connection, setConnection] = createSignal<
+  'connected' | 'disconnected' | 'connecting'
+>('connecting');
 
 const handleMessage = (event: ServerEvent) => {
   switch (event.type) {
@@ -89,8 +91,10 @@ const handleMessage = (event: ServerEvent) => {
       if (p.isPlaying !== undefined) setStore('playback', 'isPlaying', p.isPlaying);
       if (p.tempo !== undefined) setStore('playback', 'tempo', p.tempo);
       if (p.songProgress !== undefined) setStore('playback', 'songProgress', p.songProgress);
-      if (p.sectionProgress !== undefined) setStore('playback', 'sectionProgress', p.sectionProgress);
-      if (p.remainingTimeInSong !== undefined) setStore('playback', 'remainingTimeInSong', p.remainingTimeInSong);
+      if (p.sectionProgress !== undefined)
+        setStore('playback', 'sectionProgress', p.sectionProgress);
+      if (p.remainingTimeInSong !== undefined)
+        setStore('playback', 'remainingTimeInSong', p.remainingTimeInSong);
       break;
     }
     case 'playback.songChanged': {
@@ -154,14 +158,18 @@ const handleMessage = (event: ServerEvent) => {
         setStore('midi', 'mappings', event.payload.mappings);
       } else if (event.payload.mapping) {
         const learned = event.payload.mapping;
-        setStore('midi', 'mappings', produce(mappings => {
-          const idx = mappings.findIndex(m => m.id === learned.id);
-          if (idx !== -1) {
-            mappings[idx] = learned;
-          } else {
-            mappings.push(learned);
-          }
-        }));
+        setStore(
+          'midi',
+          'mappings',
+          produce((mappings) => {
+            const idx = mappings.findIndex((m) => m.id === learned.id);
+            if (idx !== -1) {
+              mappings[idx] = learned;
+            } else {
+              mappings.push(learned);
+            }
+          }),
+        );
       }
       break;
     }

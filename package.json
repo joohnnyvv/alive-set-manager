@@ -6,6 +6,10 @@
   "scripts": {
     "dev:backend": "tsx watch src/index.ts",
     "test": "node scripts/test.mjs",
+    "lint": "biome lint . --error-on-warnings",
+    "lint:fix": "biome lint . --write",
+    "format": "biome format . --write",
+    "format:check": "biome format .",
     "dev:frontend": "vite",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build:backend": "tsc -p tsconfig.build.json",
@@ -99,6 +103,7 @@
     "ws": "^8.22.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.4",
     "@fontsource/dm-mono": "5.3.0",
     "@fontsource/dm-sans": "5.3.0",
     "@fontsource/dm-serif-display": "5.3.0",

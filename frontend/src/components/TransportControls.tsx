@@ -41,30 +41,69 @@ const TransportControls: Component<TransportControlsProps> = (props) => {
 
   return (
     <div class="transport-controls">
-      <button class="btn-transport btn-prev" title="Previous Song" onClick={() => { logUi('Clicked Prev Song button'); props.onPrev(); }} innerHTML={SVG_ICONS.PREV}></button>
+      <button
+        class="btn-transport btn-prev"
+        title="Previous Song"
+        onClick={() => {
+          logUi('Clicked Prev Song button');
+          props.onPrev();
+        }}
+        innerHTML={SVG_ICONS.PREV}
+      ></button>
       <button
         class="btn-transport btn-play"
         classList={{ 'is-playing': props.playback.isPlaying }}
         title={props.playback.isPlaying ? 'Pause' : 'Play'}
         onClick={() => {
-          if (props.playback.isPlaying) { logUi('Clicked Pause button'); props.onPause(); }
-          else { logUi('Clicked Play button'); props.onPlay(); }
+          if (props.playback.isPlaying) {
+            logUi('Clicked Pause button');
+            props.onPause();
+          } else {
+            logUi('Clicked Play button');
+            props.onPlay();
+          }
         }}
         innerHTML={props.playback.isPlaying ? SVG_ICONS.PAUSE : SVG_ICONS.PLAY}
       ></button>
-      <button class="btn-transport btn-stop" title="Stop" onClick={() => { logUi('Clicked Stop button'); props.onStop(); }} innerHTML={SVG_ICONS.STOP}></button>
-      <button class="btn-transport btn-next" title="Next Song" onClick={() => { logUi('Clicked Next Song button'); props.onNext(); }} innerHTML={SVG_ICONS.NEXT}></button>
+      <button
+        class="btn-transport btn-stop"
+        title="Stop"
+        onClick={() => {
+          logUi('Clicked Stop button');
+          props.onStop();
+        }}
+        innerHTML={SVG_ICONS.STOP}
+      ></button>
+      <button
+        class="btn-transport btn-next"
+        title="Next Song"
+        onClick={() => {
+          logUi('Clicked Next Song button');
+          props.onNext();
+        }}
+        innerHTML={SVG_ICONS.NEXT}
+      ></button>
       <button
         class="btn-transport btn-go"
         classList={{
-          'is-queued': props.playback.isPlaying && !!(props.playback.queuedSongId || props.playback.queuedSectionId),
-          'is-looping': props.playback.isPlaying && props.playback.isLooping && !(props.playback.queuedSongId || props.playback.queuedSectionId),
+          'is-queued':
+            props.playback.isPlaying &&
+            !!(props.playback.queuedSongId || props.playback.queuedSectionId),
+          'is-looping':
+            props.playback.isPlaying &&
+            props.playback.isLooping &&
+            !(props.playback.queuedSongId || props.playback.queuedSectionId),
         }}
         title={`Smart Action (${goState().text})`}
-        onClick={() => { logUi(`Clicked GO button (State: ${goState().text})`); props.onGo(); }}
+        onClick={() => {
+          logUi(`Clicked GO button (State: ${goState().text})`);
+          props.onGo();
+        }}
       >
         <span class="go-icon" innerHTML={goState().icon}></span>
-        <span class="go-word" aria-hidden="true">GO</span>
+        <span class="go-word" aria-hidden="true">
+          GO
+        </span>
         <span class="go-label">{goState().text}</span>
       </button>
     </div>

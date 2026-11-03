@@ -19,17 +19,26 @@ const SectionItem: Component<SectionItemProps> = (props) => {
   const handleClick = () => {
     logUi(`Clicked section tile: "${props.section.name}" (id: ${props.section.id})`);
     try {
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator && (navigator as any).userActivation?.hasBeenActive) {
+      if (
+        typeof navigator !== 'undefined' &&
+        'vibrate' in navigator &&
+        (navigator as any).userActivation?.hasBeenActive
+      ) {
         navigator.vibrate(25);
       }
-    } catch { /* Ignore */ }
+    } catch {
+      /* Ignore */
+    }
     props.onClick(props.section);
   };
 
   // For chord pills, render inline
   const chordTokens = () => {
     if (!props.section.chords) return [];
-    return props.section.chords.split(/[\s\-\|,\/\>]+/).map(c => c.trim()).filter(c => c.length > 0);
+    return props.section.chords
+      .split(/[\s\-\|,\/\>]+/)
+      .map((c) => c.trim())
+      .filter((c) => c.length > 0);
   };
 
   return (
@@ -47,7 +56,10 @@ const SectionItem: Component<SectionItemProps> = (props) => {
       onClick={handleClick}
     >
       <div class="section-tile-header">
-        <span class="section-tile-name">{props.section.flags?.quickJump ? '>> ' : ''}{props.section.name}</span>
+        <span class="section-tile-name">
+          {props.section.flags?.quickJump ? '>> ' : ''}
+          {props.section.name}
+        </span>
         <span class="section-tile-duration">{formatDuration(props.section.duration)}</span>
       </div>
       <Show when={props.section.chords && chordTokens().length > 0}>
@@ -60,7 +72,10 @@ const SectionItem: Component<SectionItemProps> = (props) => {
           ))}
         </div>
       </Show>
-      <div class="section-tile-progress" style={{ width: props.isActive ? `${(props.sectionProgress ?? 0) * 100}%` : '0%' }}></div>
+      <div
+        class="section-tile-progress"
+        style={{ width: props.isActive ? `${(props.sectionProgress ?? 0) * 100}%` : '0%' }}
+      ></div>
     </button>
   );
 };

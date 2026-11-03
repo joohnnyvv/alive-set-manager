@@ -6,7 +6,7 @@ export interface ScheduledEvent {
 }
 
 export class Timekeeper {
-  private lookaheadMs = 25.0;     // Run tick every 25ms
+  private lookaheadMs = 25.0; // Run tick every 25ms
   private scheduleAheadMs = 100.0; // Look 100ms into future
   private timerID?: NodeJS.Timeout;
   private currentBeatTime = 0;
@@ -53,7 +53,9 @@ export class Timekeeper {
     }
 
     // Filter out triggered events
-    this.scheduledEvents = this.scheduledEvents.filter(e => !e.triggered && e.beatTime > current - 4);
+    this.scheduledEvents = this.scheduledEvents.filter(
+      (e) => !e.triggered && e.beatTime > current - 4,
+    );
   }
 
   public scheduleAt(beatTime: number, callback: () => void | Promise<void>): string {
@@ -68,7 +70,7 @@ export class Timekeeper {
   }
 
   public cancelEvent(id: string): void {
-    this.scheduledEvents = this.scheduledEvents.filter(e => e.id !== id);
+    this.scheduledEvents = this.scheduledEvents.filter((e) => e.id !== id);
   }
 
   public clearAll(): void {

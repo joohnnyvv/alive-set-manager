@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { SetlistEngine } from './setlist.js';
 
 describe('Setlist Engine', () => {
-
   test('builds songs, sections, and calculates durations accurately', () => {
     const engine = new SetlistEngine();
     const cues = [
@@ -133,12 +132,12 @@ describe('Setlist Engine', () => {
     // Remove song 1
     engine.removeSong('s1');
     let state = engine.getSetlistState();
-    assert.equal(state.songs.find(s => s.id === 's1')?.isSkipped, true);
+    assert.equal(state.songs.find((s) => s.id === 's1')?.isSkipped, true);
 
     // Restore song 1
     engine.restoreSong('s1');
     state = engine.getSetlistState();
-    assert.equal(state.songs.find(s => s.id === 's1')?.isSkipped, false);
+    assert.equal(state.songs.find((s) => s.id === 's1')?.isSkipped, false);
   });
 
   test('supports song detail overrides (color, stop behavior, duration)', () => {
@@ -171,12 +170,20 @@ describe('Setlist Engine', () => {
 
     // Recompute state with different tempo / time
     state = engine.getSetlistState(140, 10, true);
-    assert.equal(state.songs[0].duration, 250, 'Duration override must persist across getSetlistState recomputation');
+    assert.equal(
+      state.songs[0].duration,
+      250,
+      'Duration override must persist across getSetlistState recomputation',
+    );
     assert.equal(state.songs[0].durationOverride, 250);
 
     // Rebuild from cues (e.g. Ableton cue points refreshed)
     state = engine.buildSetlistFromCues(cues, 120);
-    assert.equal(state.songs[0].duration, 250, 'Duration override must persist after cue points reload');
+    assert.equal(
+      state.songs[0].duration,
+      250,
+      'Duration override must persist after cue points reload',
+    );
     assert.equal(state.songs[0].durationOverride, 250);
   });
 
@@ -244,15 +251,17 @@ describe('Setlist Engine', () => {
     assert.equal(active.song?.id, dupId, 'Should keep duplicate song instance active');
 
     const state2 = engine.getSetlistState(120, 10, true);
-    assert.equal(state2.activeSongId, dupId, 'State should broadcast duplicate song ID as activeSongId');
+    assert.equal(
+      state2.activeSongId,
+      dupId,
+      'State should broadcast duplicate song ID as activeSongId',
+    );
 
     // Advance timeline past 32 to beat 40 (Song Beta)
     const activeBeta = engine.getActiveSongAndSection(40);
     assert.equal(activeBeta.song?.id, 's2');
   });
-
 });
-
 
 describe('saved setlist restoration', () => {
   const cues = [
@@ -267,14 +276,22 @@ describe('saved setlist restoration', () => {
     const duplicate = original.duplicateSong('song1')!;
     const disabledDuplicate = original.duplicateSong(duplicate.id)!;
     original.removeSong('song1');
-    original.updateSongOverride(disabledDuplicate.id, { isSkipped: true, color: 'blue', duration: 45 });
+    original.updateSongOverride(disabledDuplicate.id, {
+      isSkipped: true,
+      color: 'blue',
+      duration: 45,
+    });
     original.reorder(['song2', duplicate.id, 'song1', disabledDuplicate.id]);
-    const saved = JSON.parse(JSON.stringify({
-      version: 2, name: 'Tour', createdAt: new Date().toISOString(),
-      order: original.getSetlistState().order,
-      songOverrides: original.getSongOverrides(),
-      duplicates: original.getSavedDuplicates(),
-    }));
+    const saved = JSON.parse(
+      JSON.stringify({
+        version: 2,
+        name: 'Tour',
+        createdAt: new Date().toISOString(),
+        order: original.getSetlistState().order,
+        songOverrides: original.getSongOverrides(),
+        duplicates: original.getSavedDuplicates(),
+      }),
+    );
 
     const restored = new SetlistEngine();
     restored.buildSetlistFromCues(cues);
@@ -302,7 +319,13 @@ describe('saved setlist restoration', () => {
     const songOverrides = engine.getSongOverrides();
     engine.duplicateSong('song1');
     engine.removeSong('song2');
-    engine.restoreSavedSetlist({ version: 2, name: 'Clean', createdAt: '', order: ['song1', 'song2'], songOverrides });
+    engine.restoreSavedSetlist({
+      version: 2,
+      name: 'Clean',
+      createdAt: '',
+      order: ['song1', 'song2'],
+      songOverrides,
+    });
     assert.equal(engine.getSetlistState().songs.length, 2);
     assert.equal(engine.getSongById('song2')?.isSkipped, false);
   });
@@ -310,7 +333,13 @@ describe('saved setlist restoration', () => {
   test('still reads legacy files without duplicate or disabled metadata', () => {
     const engine = new SetlistEngine();
     engine.buildSetlistFromCues(cues);
-    engine.restoreSavedSetlist({ version: 1, name: 'Legacy', createdAt: '', order: ['song2', 'song1'], songOverrides: { song1: { color: 'red' } } });
+    engine.restoreSavedSetlist({
+      version: 1,
+      name: 'Legacy',
+      createdAt: '',
+      order: ['song2', 'song1'],
+      songOverrides: { song1: { color: 'red' } },
+    });
     assert.deepEqual(engine.getSetlistState().order, ['song2', 'song1']);
     assert.equal(engine.getSongById('song1')?.color, 'red');
   });

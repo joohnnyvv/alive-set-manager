@@ -1,5 +1,4 @@
 import easymidi from 'easymidi';
-import fs from 'fs/promises';
 import path from 'path';
 import { dataDirectory, atomicJson, readJson } from '../storage/files.js';
 import { MidiMapping, MidiAction, MidiMessageType } from '../types/index.js';
@@ -22,7 +21,7 @@ export class MidiEngine {
   constructor(
     private onActionTriggered: (action: MidiAction) => void,
     private onMidiLearned?: (mappingId: string, mapping: MidiMapping) => void,
-    customFilePath?: string
+    customFilePath?: string,
   ) {
     this.storageFilePath = customFilePath || getDefaultMidiFilePath();
   }
@@ -91,10 +90,15 @@ export class MidiEngine {
       const channel = (msg.channel || 0) + 1;
       const note = msg.note;
       const cc = msg.controller;
-      const value = msg.value !== undefined ? msg.value : (msg.velocity !== undefined ? msg.velocity : msg.number);
+      const value =
+        msg.value !== undefined
+          ? msg.value
+          : msg.velocity !== undefined
+            ? msg.velocity
+            : msg.number;
 
       if (this.isLearning && this.learningMappingId) {
-        const targetMapping = this.mappings.find(m => m.id === this.learningMappingId);
+        const targetMapping = this.mappings.find((m) => m.id === this.learningMappingId);
         if (targetMapping) {
           targetMapping.inputName = portName;
           targetMapping.messageType = messageType;
@@ -103,7 +107,7 @@ export class MidiEngine {
           targetMapping.cc = cc;
           // For notes, velocity is dynamic, so keep value undefined for "any velocity"; for CC/PC user can override
           targetMapping.value = undefined;
-          this.saveMappings().catch(err => {
+          this.saveMappings().catch((err) => {
             console.error('[MidiEngine] Failed to save learned mapping:', err);
           });
 
@@ -120,7 +124,11 @@ export class MidiEngine {
 
       // Check mapping matches
       for (const mapping of this.mappings) {
-        if (mapping.inputName && mapping.inputName.trim() !== '' && mapping.inputName !== 'Any Device') {
+        if (
+          mapping.inputName &&
+          mapping.inputName.trim() !== '' &&
+          mapping.inputName !== 'Any Device'
+        ) {
           if (mapping.inputName !== portName) continue;
         }
         if (mapping.messageType !== messageType) continue;
@@ -142,16 +150,16 @@ export class MidiEngine {
       }
     };
 
-    input.on('noteon', msg => {
+    input.on('noteon', (msg) => {
       if (msg.velocity === 0) {
         handleMsg('note-off', msg);
       } else {
         handleMsg('note-on', msg);
       }
     });
-    input.on('noteoff', msg => handleMsg('note-off', msg));
-    input.on('cc', msg => handleMsg('cc', msg));
-    input.on('program', msg => handleMsg('pc', msg));
+    input.on('noteoff', (msg) => handleMsg('note-off', msg));
+    input.on('cc', (msg) => handleMsg('cc', msg));
+    input.on('program', (msg) => handleMsg('pc', msg));
   }
 
   public startLearn(mappingId: string): void {
@@ -165,7 +173,7 @@ export class MidiEngine {
   }
 
   public async addMapping(mapping: MidiMapping): Promise<void> {
-    const existingIdx = this.mappings.findIndex(m => m.id === mapping.id);
+    const existingIdx = this.mappings.findIndex((m) => m.id === mapping.id);
     if (existingIdx !== -1) {
       this.mappings[existingIdx] = mapping;
     } else {
@@ -175,7 +183,7 @@ export class MidiEngine {
   }
 
   public async updateMapping(updated: MidiMapping): Promise<void> {
-    const idx = this.mappings.findIndex(m => m.id === updated.id);
+    const idx = this.mappings.findIndex((m) => m.id === updated.id);
     if (idx !== -1) {
       this.mappings[idx] = updated;
     } else {
@@ -185,7 +193,7 @@ export class MidiEngine {
   }
 
   public async removeMapping(mappingId: string): Promise<void> {
-    this.mappings = this.mappings.filter(m => m.id !== mappingId);
+    this.mappings = this.mappings.filter((m) => m.id !== mappingId);
     await this.saveMappings();
   }
 
@@ -200,8 +208,14 @@ export class MidiEngine {
 
   public async loadMappings(): Promise<void> {
     const value = await readJson(this.storageFilePath);
-    if (value === undefined) { this.mappings = []; return; }
-    if (!Array.isArray(value) || !value.every(m => m && typeof m.id === 'string' && typeof m.action?.type === 'string')) {
+    if (value === undefined) {
+      this.mappings = [];
+      return;
+    }
+    if (
+      !Array.isArray(value) ||
+      !value.every((m) => m && typeof m.id === 'string' && typeof m.action?.type === 'string')
+    ) {
       throw new Error('Invalid saved MIDI mappings. Original file retained.');
     }
     this.mappings = value;

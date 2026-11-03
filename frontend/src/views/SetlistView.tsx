@@ -4,7 +4,7 @@ import SongItem from '../components/SongItem.js';
 import { showToast } from '../components/Toast.js';
 import { apiFetch } from '../api/http.js';
 import { formatDuration } from '../utils/formatTime.js';
-import type { Song, Section, StopBehavior } from '../types.js';
+import type { Song, StopBehavior } from '../types.js';
 
 export default function SetlistView() {
   const [showAddModal, setShowAddModal] = createSignal(false);
@@ -32,17 +32,22 @@ export default function SetlistView() {
       if (!q) return true;
       if (q.startsWith('#')) {
         const tag = q.substring(1);
-        return s.tags && s.tags.some(t => t.toLowerCase().includes(tag));
+        return s.tags && s.tags.some((t) => t.toLowerCase().includes(tag));
       }
-      return s.name.toLowerCase().includes(q) || (s.description && s.description.toLowerCase().includes(q));
+      return (
+        s.name.toLowerCase().includes(q) ||
+        (s.description && s.description.toLowerCase().includes(q))
+      );
     });
   };
 
   const copySetlistAsText = () => {
-    const songNames = store.setlist.songs.filter((s: Song) => !s.isSkipped).map((s: Song) => s.name);
+    const songNames = store.setlist.songs
+      .filter((s: Song) => !s.isSkipped)
+      .map((s: Song) => s.name);
     navigator.clipboard.writeText(songNames.join('\n')).then(
       () => showToast('Setlist copied to clipboard!', 'success'),
-      () => showToast('Failed to copy to clipboard', 'error')
+      () => showToast('Failed to copy to clipboard', 'error'),
     );
   };
 
@@ -84,7 +89,7 @@ export default function SetlistView() {
         body: JSON.stringify({ name }),
       });
       if (!response.ok) throw new Error('Delete failed');
-      const remaining = loadFiles().filter(file => file !== name);
+      const remaining = loadFiles().filter((file) => file !== name);
       setLoadFiles(remaining);
       setSelectedLoadFile(remaining[0] ?? '');
       setConfirmDelete(false);
@@ -101,35 +106,65 @@ export default function SetlistView() {
       <div class="view-header">
         <h2 class="view-title">Setlist</h2>
         <div class="header-actions">
-          <button class="btn btn-primary" onClick={() => setShowAddModal(true)}>Add Song</button>
-          <button class="btn btn-secondary" onClick={() => { setSaveName(''); setShowSaveModal(true); }}>Save</button>
-          <button class="btn btn-secondary" onClick={() => {
-            setConfirmDelete(false);
-            setSelectedLoadFile('');
-            setLoadFiles([]);
-            setShowLoadModal(true);
-            apiFetch('/api/setlist/files')
-              .then((res) => res.json())
-              .then((files: string[]) => {
-                setLoadFiles(files || []);
-                if (files && files.length > 0) setSelectedLoadFile(files[0]);
-              })
-              .catch(() => showToast('Failed to load setlist files', 'error'));
-          }}>Load</button>
-          <button class="btn btn-secondary" onClick={copySetlistAsText}>Copy Text</button>
-          <button class="btn btn-secondary" onClick={() => { setImportText(''); setShowImportModal(true); }}>Import Text</button>
+          <button class="btn btn-primary" onClick={() => setShowAddModal(true)}>
+            Add Song
+          </button>
+          <button
+            class="btn btn-secondary"
+            onClick={() => {
+              setSaveName('');
+              setShowSaveModal(true);
+            }}
+          >
+            Save
+          </button>
+          <button
+            class="btn btn-secondary"
+            onClick={() => {
+              setConfirmDelete(false);
+              setSelectedLoadFile('');
+              setLoadFiles([]);
+              setShowLoadModal(true);
+              apiFetch('/api/setlist/files')
+                .then((res) => res.json())
+                .then((files: string[]) => {
+                  setLoadFiles(files || []);
+                  if (files && files.length > 0) setSelectedLoadFile(files[0]);
+                })
+                .catch(() => showToast('Failed to load setlist files', 'error'));
+            }}
+          >
+            Load
+          </button>
+          <button class="btn btn-secondary" onClick={copySetlistAsText}>
+            Copy Text
+          </button>
+          <button
+            class="btn btn-secondary"
+            onClick={() => {
+              setImportText('');
+              setShowImportModal(true);
+            }}
+          >
+            Import Text
+          </button>
         </div>
       </div>
 
       <div class="setlist-container" role="region" aria-label="Setlist songs" tabIndex={0}>
-        <Show when={store.setlist.songs && store.setlist.songs.length > 0} fallback={
-          <div class="empty-state">
-            <div class="empty-icon" innerHTML={`<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`}>
+        <Show
+          when={store.setlist.songs && store.setlist.songs.length > 0}
+          fallback={
+            <div class="empty-state">
+              <div
+                class="empty-icon"
+                innerHTML={`<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`}
+              ></div>
+              <h3>No Songs Available</h3>
+              <p>Connect Ableton Live with Cue Point locators or add songs manually.</p>
             </div>
-            <h3>No Songs Available</h3>
-            <p>Connect Ableton Live with Cue Point locators or add songs manually.</p>
-          </div>
-        }>
+          }
+        >
           <For each={store.setlist.songs}>
             {(song, idx) => (
               <div
@@ -190,17 +225,28 @@ export default function SetlistView() {
       </div>
 
       <div class="setlist-footer">
-        <span>Total Set Duration: <strong>{formatDuration(store.setlist.totalDuration || 0)}</strong></span>
-        <span>Remaining: <strong>{formatDuration(store.setlist.remainingTime || 0)}</strong></span>
+        <span>
+          Total Set Duration: <strong>{formatDuration(store.setlist.totalDuration || 0)}</strong>
+        </span>
+        <span>
+          Remaining: <strong>{formatDuration(store.setlist.remainingTime || 0)}</strong>
+        </span>
       </div>
 
       {/* Add Song Modal */}
       <Show when={showAddModal()}>
-        <div class="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}>
+        <div
+          class="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowAddModal(false);
+          }}
+        >
           <div class="modal-content">
             <div class="modal-header">
               <h3>Add Song to Setlist</h3>
-              <button class="btn-icon modal-close" onClick={() => setShowAddModal(false)}>✕</button>
+              <button class="btn-icon modal-close" onClick={() => setShowAddModal(false)}>
+                ✕
+              </button>
             </div>
             <div class="modal-body">
               <input
@@ -212,7 +258,10 @@ export default function SetlistView() {
                 autofocus
               />
               <div class="search-results-list">
-                <Show when={filteredSongs().length > 0} fallback={<div class="empty-search">No matching songs found</div>}>
+                <Show
+                  when={filteredSongs().length > 0}
+                  fallback={<div class="empty-search">No matching songs found</div>}
+                >
                   <For each={filteredSongs()}>
                     {(song) => (
                       <div class="search-result-item">
@@ -249,13 +298,23 @@ export default function SetlistView() {
 
       {/* Edit Song Modal */}
       <Show when={showEditModal()}>
-        <div class="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false); }}>
+        <div
+          class="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowEditModal(false);
+          }}
+        >
           <div class="modal-content">
             <div class="modal-header">
               <h3>Edit Song: {editingSong()?.name}</h3>
-              <button class="btn-icon modal-close" onClick={() => setShowEditModal(false)}>✕</button>
+              <button class="btn-icon modal-close" onClick={() => setShowEditModal(false)}>
+                ✕
+              </button>
             </div>
-            <div class="modal-body" style={{ display: 'flex', 'flex-direction': 'column', gap: '14px' }}>
+            <div
+              class="modal-body"
+              style={{ display: 'flex', 'flex-direction': 'column', gap: '14px' }}
+            >
               <div class="setting-row">
                 <label>Stop Behavior</label>
                 <select
@@ -279,9 +338,20 @@ export default function SetlistView() {
                   onInput={(e) => setEditColor(e.currentTarget.value)}
                 />
               </div>
-              <div style={{ display: 'flex', 'justify-content': 'flex-end', gap: '10px', 'margin-top': '10px' }}>
-                <button class="btn btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
-                <button class="btn btn-primary" onClick={handleSaveEdit}>Save Changes</button>
+              <div
+                style={{
+                  display: 'flex',
+                  'justify-content': 'flex-end',
+                  gap: '10px',
+                  'margin-top': '10px',
+                }}
+              >
+                <button class="btn btn-secondary" onClick={() => setShowEditModal(false)}>
+                  Cancel
+                </button>
+                <button class="btn btn-primary" onClick={handleSaveEdit}>
+                  Save Changes
+                </button>
               </div>
             </div>
           </div>
@@ -290,13 +360,23 @@ export default function SetlistView() {
 
       {/* Save Setlist Modal */}
       <Show when={showSaveModal()}>
-        <div class="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowSaveModal(false); }}>
+        <div
+          class="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowSaveModal(false);
+          }}
+        >
           <div class="modal-content">
             <div class="modal-header">
               <h3>Save Setlist</h3>
-              <button class="btn-icon modal-close" onClick={() => setShowSaveModal(false)}>✕</button>
+              <button class="btn-icon modal-close" onClick={() => setShowSaveModal(false)}>
+                ✕
+              </button>
             </div>
-            <div class="modal-body" style={{ display: 'flex', 'flex-direction': 'column', gap: '14px' }}>
+            <div
+              class="modal-body"
+              style={{ display: 'flex', 'flex-direction': 'column', gap: '14px' }}
+            >
               <input
                 type="text"
                 class="input-search"
@@ -306,7 +386,9 @@ export default function SetlistView() {
                 autofocus
               />
               <div style={{ display: 'flex', 'justify-content': 'flex-end', gap: '10px' }}>
-                <button class="btn btn-secondary" onClick={() => setShowSaveModal(false)}>Cancel</button>
+                <button class="btn btn-secondary" onClick={() => setShowSaveModal(false)}>
+                  Cancel
+                </button>
                 <button
                   class="btn btn-primary"
                   onClick={() => {
@@ -329,33 +411,67 @@ export default function SetlistView() {
 
       {/* Load Setlist Modal */}
       <Show when={showLoadModal()}>
-        <div class="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowLoadModal(false); }}>
+        <div
+          class="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowLoadModal(false);
+          }}
+        >
           <div class="modal-content">
             <div class="modal-header">
               <h3>Load Saved Setlist</h3>
-              <button class="btn-icon modal-close" onClick={() => setShowLoadModal(false)}>✕</button>
+              <button class="btn-icon modal-close" onClick={() => setShowLoadModal(false)}>
+                ✕
+              </button>
             </div>
-            <div class="modal-body" style={{ display: 'flex', 'flex-direction': 'column', gap: '14px' }}>
-              <Show when={loadFiles().length > 0} fallback={<div class="empty-search">No saved setlists found</div>}>
+            <div
+              class="modal-body"
+              style={{ display: 'flex', 'flex-direction': 'column', gap: '14px' }}
+            >
+              <Show
+                when={loadFiles().length > 0}
+                fallback={<div class="empty-search">No saved setlists found</div>}
+              >
                 <select
                   class="select-input"
                   value={selectedLoadFile()}
                   disabled={deletingSetlist()}
                   aria-label="Saved setlist"
-                  onChange={(e) => { setSelectedLoadFile(e.currentTarget.value); setConfirmDelete(false); }}
+                  onChange={(e) => {
+                    setSelectedLoadFile(e.currentTarget.value);
+                    setConfirmDelete(false);
+                  }}
                 >
-                  <For each={loadFiles()}>
-                    {(file) => <option value={file}>{file}</option>}
-                  </For>
+                  <For each={loadFiles()}>{(file) => <option value={file}>{file}</option>}</For>
                 </select>
                 <Show when={confirmDelete()}>
-                  <p role="alert">Delete saved setlist "{selectedLoadFile()}" permanently? Your current setlist will stay open.</p>
+                  <p role="alert">
+                    Delete saved setlist "{selectedLoadFile()}" permanently? Your current setlist
+                    will stay open.
+                  </p>
                 </Show>
                 <div style={{ display: 'flex', 'justify-content': 'flex-end', gap: '10px' }}>
-                  <button class="btn btn-secondary" disabled={deletingSetlist()} onClick={deleteSelectedSetlist}>
-                    {deletingSetlist() ? 'Deleting…' : confirmDelete() ? 'Confirm Delete' : 'Delete'}
+                  <button
+                    class="btn btn-secondary"
+                    disabled={deletingSetlist()}
+                    onClick={deleteSelectedSetlist}
+                  >
+                    {deletingSetlist()
+                      ? 'Deleting…'
+                      : confirmDelete()
+                        ? 'Confirm Delete'
+                        : 'Delete'}
                   </button>
-                  <button class="btn btn-secondary" disabled={deletingSetlist()} onClick={() => { setConfirmDelete(false); setShowLoadModal(false); }}>Cancel</button>
+                  <button
+                    class="btn btn-secondary"
+                    disabled={deletingSetlist()}
+                    onClick={() => {
+                      setConfirmDelete(false);
+                      setShowLoadModal(false);
+                    }}
+                  >
+                    Cancel
+                  </button>
                   <button
                     class="btn btn-primary"
                     disabled={deletingSetlist() || confirmDelete()}
@@ -378,13 +494,23 @@ export default function SetlistView() {
 
       {/* Import Text Modal */}
       <Show when={showImportModal()}>
-        <div class="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowImportModal(false); }}>
+        <div
+          class="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowImportModal(false);
+          }}
+        >
           <div class="modal-content">
             <div class="modal-header">
               <h3>Import Setlist from Text</h3>
-              <button class="btn-icon modal-close" onClick={() => setShowImportModal(false)}>✕</button>
+              <button class="btn-icon modal-close" onClick={() => setShowImportModal(false)}>
+                ✕
+              </button>
             </div>
-            <div class="modal-body" style={{ display: 'flex', 'flex-direction': 'column', gap: '14px' }}>
+            <div
+              class="modal-body"
+              style={{ display: 'flex', 'flex-direction': 'column', gap: '14px' }}
+            >
               <p style={{ color: 'var(--text-secondary)', 'font-size': '0.85rem', margin: 0 }}>
                 Paste song names separated by newlines. The setlist will reorder to match.
               </p>
@@ -396,7 +522,9 @@ export default function SetlistView() {
                 onInput={(e) => setImportText(e.currentTarget.value)}
               ></textarea>
               <div style={{ display: 'flex', 'justify-content': 'flex-end', gap: '10px' }}>
-                <button class="btn btn-secondary" onClick={() => setShowImportModal(false)}>Cancel</button>
+                <button class="btn btn-secondary" onClick={() => setShowImportModal(false)}>
+                  Cancel
+                </button>
                 <button
                   class="btn btn-primary"
                   onClick={() => {

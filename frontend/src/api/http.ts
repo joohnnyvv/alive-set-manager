@@ -6,11 +6,15 @@ export function getBackendPort(): number {
     try {
       const params = new URLSearchParams(window.location.search);
       const p = params.get('backendPort') || params.get('port');
-      if (p && !isNaN(Number(p))) {
+      if (p && !Number.isNaN(Number(p))) {
         return Number(p);
       }
     } catch {}
-    if (window.location.port && window.location.port !== '5173' && window.location.protocol !== 'file:') {
+    if (
+      window.location.port &&
+      window.location.port !== '5173' &&
+      window.location.protocol !== 'file:'
+    ) {
       return Number(window.location.port);
     }
   }
@@ -24,7 +28,8 @@ export function getAuthToken(): string | null {
     }
     try {
       const params = new URLSearchParams(window.location.search);
-      const token = params.get('token') || params.get('authToken') || localStorage.getItem('asm_auth_token');
+      const token =
+        params.get('token') || params.get('authToken') || localStorage.getItem('asm_auth_token');
       return token;
     } catch {}
   }
@@ -33,7 +38,11 @@ export function getAuthToken(): string | null {
 
 export function getApiUrl(path: string): string {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  if (window.location.protocol === 'file:' || !window.location.host || window.location.port === '5173') {
+  if (
+    window.location.protocol === 'file:' ||
+    !window.location.host ||
+    window.location.port === '5173'
+  ) {
     const port = getBackendPort();
     return `http://localhost:${port}${cleanPath}`;
   }

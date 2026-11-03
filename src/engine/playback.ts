@@ -10,7 +10,7 @@ export class PlaybackTracker {
     private abletonBridge: LiveAdapter,
     private setlistEngine: SetlistEngine,
     private onSongChanged?: (songId: string, prevSongId?: string) => void,
-    private onSectionChanged?: (sectionId: string, prevSectionId?: string) => void
+    private onSectionChanged?: (sectionId: string, prevSectionId?: string) => void,
   ) {}
 
   public getPlaybackState(): PlaybackState {
@@ -51,7 +51,10 @@ export class PlaybackTracker {
     if (active.section) {
       const sectionLen = active.section.endTime - active.section.startTime;
       if (sectionLen > 0) {
-        sectionProgress = Math.max(0, Math.min(1, (currentTime - active.section.startTime) / sectionLen));
+        sectionProgress = Math.max(
+          0,
+          Math.min(1, (currentTime - active.section.startTime) / sectionLen),
+        );
       }
     }
 

@@ -139,8 +139,27 @@ export interface AppState {
 }
 
 export type ServerEvent =
-  | { type: 'state'; payload: { liveConnected?: boolean; setlist: Setlist; playback: PlaybackState; settings: AppSettings; midi?: { inputs: string[]; outputs: string[]; mappings: MidiMapping[] } } }
-  | { type: 'playback.tick'; payload: { currentTime: number; isPlaying: boolean; tempo: number; songProgress: number; sectionProgress: number; remainingTimeInSong: number } }
+  | {
+      type: 'state';
+      payload: {
+        liveConnected?: boolean;
+        setlist: Setlist;
+        playback: PlaybackState;
+        settings: AppSettings;
+        midi?: { inputs: string[]; outputs: string[]; mappings: MidiMapping[] };
+      };
+    }
+  | {
+      type: 'playback.tick';
+      payload: {
+        currentTime: number;
+        isPlaying: boolean;
+        tempo: number;
+        songProgress: number;
+        sectionProgress: number;
+        remainingTimeInSong: number;
+      };
+    }
   | { type: 'playback.songChanged'; payload: { songId: string; previousSongId?: string } }
   | { type: 'playback.sectionChanged'; payload: { sectionId: string; previousSectionId?: string } }
   | { type: 'playback.queued'; payload: { songId?: string; sectionId?: string } }
@@ -150,7 +169,10 @@ export type ServerEvent =
   | { type: 'midi.devices'; payload: { inputs: string[]; outputs: string[] } }
   | { type: 'midi.mappings'; payload: MidiMapping[] }
   | { type: 'midi.learning'; payload: { mappingId: string } }
-  | { type: 'midi.learned'; payload: { mappingId: string; mapping: MidiMapping; mappings?: MidiMapping[] } }
+  | {
+      type: 'midi.learned';
+      payload: { mappingId: string; mapping: MidiMapping; mappings?: MidiMapping[] };
+    }
   | { type: 'error'; payload: { message: string; code: string } };
 
 export type ClientAction =
@@ -172,7 +194,11 @@ export type ClientAction =
   | { type: 'setlist.restore-song'; songId: string }
   | { type: 'setlist.duplicate-song'; songId: string }
   | { type: 'setlist.delete-song'; songId: string }
-  | { type: 'setlist.update-song'; songId: string; overrides: { color?: string; stopBehavior?: StopBehavior; duration?: number } }
+  | {
+      type: 'setlist.update-song';
+      songId: string;
+      overrides: { color?: string; stopBehavior?: StopBehavior; duration?: number };
+    }
   | { type: 'setlist.update-section-chords'; sectionId: string; chords: string }
   | { type: 'setlist.import-text'; text: string }
   | { type: 'setlist.save'; name: string }

@@ -1,6 +1,6 @@
 # Contributing
 
-Use Node 24 and `npm ci`. Keep changes focused, add behavior tests for fixes, and update the Unreleased changelog section for user-facing changes. Run type checks, unit/integration tests, production build and the relevant browser/packaging tests.
+Use Node 24 and `npm ci`. Keep changes focused, add behavior tests for fixes, and update the Unreleased changelog section for user-facing changes. Run `npm run lint`, `npm run format:check`, type checks, unit/integration tests, production build and the relevant browser/packaging tests. Use `npm run lint:fix` for safe automatic lint fixes and `npm run format` to apply formatting.
 
 Do not commit personal settings, Live projects containing licensed audio, credentials, generated package outputs or diagnostics. Use the isolated demo for screenshots. Document real-hardware findings with OS, architecture, Live version, app version and precise steps.
 
