@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev:backend": "tsx watch src/index.ts",
-    "test": "node scripts/test.mjs",
+    "test": "node --test scripts/audit.test.mjs && node scripts/test.mjs",
+    "audit:dependencies": "node scripts/audit.mjs",
     "lint": "biome lint . --error-on-warnings",
     "lint:fix": "biome lint . --write",
     "format": "biome format . --write",
@@ -134,6 +135,7 @@
     "url": "https://github.com/joohnnyvv/alive-set-manager/issues"
   },
   "overrides": {
+    "minimatch@>=9 <11.0.1": "11.0.2",
     "ableton-js": {
       "uuid": "11.1.1"
     }
