@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import net from 'node:net';
+import { once } from 'node:events';
 import { WebSocket } from 'ws';
 import { startBackendServer } from '../index.js';
 import { DemoLive, DemoMidi } from '../testing/demo.js';
@@ -85,4 +87,30 @@ test('real HTTP/WebSocket controls, authentication, persistence and shutdown', a
   } finally {
     await next.close();
   }
+});
+
+test('shutdown closes idle HTTP connections without waiting for the renderer', {
+  timeout: 5000,
+}, async (t) => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'alive-shutdown-'));
+  t.after(() => fs.rm(dataDir, { recursive: true, force: true }));
+  const backend = await startBackendServer({
+    dataDir,
+    live: new DemoLive(),
+    midiFactory: (a, b, f) => new DemoMidi(a, b, f),
+    port: 0,
+    migrate: false,
+  });
+  t.after(() => backend.close());
+  // Model Chromium preconnecting without sending an HTTP request.
+  const socket = net.connect(backend.port, '127.0.0.1');
+  t.after(() => socket.destroy());
+  await once(socket, 'connect');
+  // Ensure the server has accepted the earlier TCP connection before shutdown.
+  await (await fetch(`http://127.0.0.1:${backend.port}/api/state`)).arrayBuffer();
+  // A forced server-side close can surface as ECONNRESET on the client.
+  socket.on('error', (error: NodeJS.ErrnoException) => assert.equal(error.code, 'ECONNRESET'));
+  const disconnected = new Promise<void>((resolve) => socket.once('close', () => resolve()));
+  await backend.close();
+  await disconnected;
 });

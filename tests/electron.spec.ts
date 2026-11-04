@@ -14,7 +14,7 @@ test('packaged desktop boots, exposes safe setup, reloads and preserves preferen
       args: executablePath ? [] : ['.'],
       env: { ...process.env, ASM_DATA_DIR: directory, ASM_DEMO: '1' },
     });
-  let app = await launch();
+  let app = await test.step('Launch desktop', launch);
   try {
     let page = await app.firstWindow();
     await expect(page.getByRole('heading', { name: 'Ready for your next set.' })).toBeVisible();
@@ -42,13 +42,13 @@ test('packaged desktop boots, exposes safe setup, reloads and preserves preferen
     ).toBe('function');
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Song Sections', exact: true })).toBeVisible();
-    await app.close();
-    app = await launch();
+    await test.step('Quit desktop before restart', () => app.close(), { timeout: 15000 });
+    app = await test.step('Restart desktop', launch);
     page = await app.firstWindow();
     await expect(page.getByRole('heading', { name: 'Song Sections', exact: true })).toBeVisible();
     await expect(page.locator('.live-status-bar')).toHaveText('Live connected');
   } finally {
-    await app.close();
+    await test.step('Close desktop', () => app.close(), { timeout: 15000 });
     await fs.rm(directory, { recursive: true, force: true });
   }
 });

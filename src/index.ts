@@ -329,7 +329,12 @@ async function main(options: BackendOptions = {}): Promise<BackendHandle> {
     timekeeper.clearAll();
     midiEngine.close();
     await wsServer.close();
-    if (server.listening) await new Promise<void>((resolve) => server.close(() => resolve()));
+    if (server.listening) {
+      await new Promise<void>((resolve) => {
+        server.close(() => resolve());
+        server.closeAllConnections();
+      });
+    }
     await abletonBridge.close();
   };
   return new Promise<BackendHandle>((resolve, reject) => {
