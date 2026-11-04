@@ -6,7 +6,6 @@ import { Timekeeper } from './timekeeper.js';
 import { SettingsStorage } from '../storage/settings.js';
 
 describe('Jump Engine', () => {
-
   test('state machine transitions: IDLE -> QUEUED -> JUMPING -> IDLE', async () => {
     const setlistEngine = new SetlistEngine();
     const cues = [
@@ -27,19 +26,21 @@ describe('Jump Engine', () => {
       setLoop: async () => {},
       getCurrentSongTime: () => currentSongTime,
       getTempo: () => 120,
-      jumpToCue: async (id: string) => { jumpedCueId = id; },
-      safePlay: async () => { playing = true; },
+      jumpToCue: async (id: string) => {
+        jumpedCueId = id;
+      },
+      safePlay: async () => {
+        playing = true;
+      },
     } as any;
 
     const tk = new Timekeeper();
     const settings = new SettingsStorage();
     await settings.updateSetting('jumpMode', 'end-of-section');
 
-    let queuedSong: string | undefined;
     let queuedSection: string | undefined;
 
-    const jumpEngine = new JumpEngine(setlistEngine, mockBridge, tk, settings, (sId, secId) => {
-      queuedSong = sId;
+    const jumpEngine = new JumpEngine(setlistEngine, mockBridge, tk, settings, (_sId, secId) => {
       queuedSection = secId;
     });
 
@@ -108,8 +109,12 @@ describe('Jump Engine', () => {
       setLoop: async () => {},
       getCurrentSongTime: () => 0,
       getTempo: () => 120,
-      jumpToCue: async (id: string) => { jumpedCueId = id; },
-      safePlay: async () => { playing = true; },
+      jumpToCue: async (id: string) => {
+        jumpedCueId = id;
+      },
+      safePlay: async () => {
+        playing = true;
+      },
     } as any;
 
     const tk = new Timekeeper();
@@ -118,7 +123,11 @@ describe('Jump Engine', () => {
 
     await jumpEngine.requestSongJump('c2');
     assert.equal(jumpedCueId, 'c2');
-    assert.equal(playing, false, 'Playback should remain stopped after jumping to a song when stopped');
+    assert.equal(
+      playing,
+      false,
+      'Playback should remain stopped after jumping to a song when stopped',
+    );
   });
 
   test('quantized mode executes immediate jump without queueing', async () => {
@@ -136,7 +145,9 @@ describe('Jump Engine', () => {
       setLoop: async () => {},
       getCurrentSongTime: () => 5,
       getTempo: () => 120,
-      jumpToCue: async (id: string) => { jumpedId = id; },
+      jumpToCue: async (id: string) => {
+        jumpedId = id;
+      },
     } as any;
 
     const tk = new Timekeeper();
@@ -149,5 +160,4 @@ describe('Jump Engine', () => {
     assert.equal(jumpedId, 'c2');
     assert.equal(jumpEngine.getQueuedTarget(), undefined);
   });
-
 });

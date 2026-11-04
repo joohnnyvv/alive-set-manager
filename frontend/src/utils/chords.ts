@@ -6,14 +6,17 @@ export function parseChordTokens(chordsStr: string): string[] {
   if (!chordsStr) return [];
   return chordsStr
     .split(/[\s\-\|,\/>]+/)
-    .map(c => c.trim())
-    .filter(c => c.length > 0);
+    .map((c) => c.trim())
+    .filter((c) => c.length > 0);
 }
 
 /**
  * Creates a container HTMLElement displaying high-contrast chord badges/pills.
  */
-export function renderChordPills(chordsStr: string, customClass: string = 'chord-progression-pills'): HTMLElement {
+export function renderChordPills(
+  chordsStr: string,
+  customClass: string = 'chord-progression-pills',
+): HTMLElement {
   const container = document.createElement('div');
   container.className = customClass;
 

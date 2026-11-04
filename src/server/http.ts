@@ -51,7 +51,7 @@ export function createHttpServer(
   settingsStorage: SettingsStorage,
   setlistStorage: SetlistStorage,
   getPlaybackState: () => PlaybackState,
-  midiEngine?: MidiEngine
+  midiEngine?: MidiEngine,
 ) {
   const app = express();
 
@@ -65,7 +65,7 @@ export function createHttpServer(
         }
       },
       credentials: true,
-    })
+    }),
   );
   app.use(express.json());
 
@@ -83,13 +83,14 @@ export function createHttpServer(
   });
 
   const root = __dirname.endsWith(`${path.sep}dist${path.sep}src${path.sep}server`)
-    ? path.resolve(__dirname, '../../..') : path.resolve(__dirname, '../..');
+    ? path.resolve(__dirname, '../../..')
+    : path.resolve(__dirname, '../..');
   const staticPath = path.join(root, 'frontend', 'dist');
 
   app.use(express.static(staticPath));
 
   // REST API Endpoints
-  app.get('/api/state', (req: Request, res: Response) => {
+  app.get('/api/state', (_req: Request, res: Response) => {
     const tempo = abletonBridge.getTempo();
     const currentTime = abletonBridge.getCurrentSongTime();
     const isPlaying = abletonBridge.isPlaying();
@@ -113,11 +114,11 @@ export function createHttpServer(
     });
   });
 
-  app.get('/api/setlist', (req: Request, res: Response) => {
+  app.get('/api/setlist', (_req: Request, res: Response) => {
     const setlist = setlistEngine.getSetlistState(
       abletonBridge.getTempo(),
       abletonBridge.getCurrentSongTime(),
-      abletonBridge.isPlaying()
+      abletonBridge.isPlaying(),
     );
     res.json(setlist);
   });
@@ -129,7 +130,12 @@ export function createHttpServer(
       return;
     }
     const setlist = setlistEngine.getSetlistState();
-    await setlistStorage.save(name.trim(), setlist.order, setlistEngine.getSongOverrides(), setlistEngine.getSavedDuplicates());
+    await setlistStorage.save(
+      name.trim(),
+      setlist.order,
+      setlistEngine.getSongOverrides(),
+      setlistEngine.getSavedDuplicates(),
+    );
     res.json({ success: true, name: name.trim() });
   });
 
@@ -167,12 +173,12 @@ export function createHttpServer(
     }
   });
 
-  app.get('/api/setlist/files', async (req: Request, res: Response) => {
+  app.get('/api/setlist/files', async (_req: Request, res: Response) => {
     const files = await setlistStorage.listFiles();
     res.json(files);
   });
 
-  app.get('/api/songs', (req: Request, res: Response) => {
+  app.get('/api/songs', (_req: Request, res: Response) => {
     const setlist = setlistEngine.getSetlistState();
     res.json(setlist.songs);
   });
@@ -182,25 +188,25 @@ export function createHttpServer(
     res.json({ ips, port: req.socket.localPort || 8080 });
   });
 
-  app.get('/api/settings', (req: Request, res: Response) => {
+  app.get('/api/settings', (_req: Request, res: Response) => {
     res.json(settingsStorage.publicSettings());
   });
 
   app.post('/api/settings', async (req: Request, res: Response) => {
     try {
-      const updated = await settingsStorage.updateSettings(req.body);
+      await settingsStorage.updateSettings(req.body);
       res.json(settingsStorage.publicSettings());
     } catch (err: any) {
       res.status(400).json({ error: err.message || 'Invalid settings payload' });
     }
   });
 
-  app.get('/api/midi/devices', (req: Request, res: Response) => {
+  app.get('/api/midi/devices', (_req: Request, res: Response) => {
     const devices = midiEngine ? midiEngine.getDevices() : { inputs: [], outputs: [] };
     res.json(devices);
   });
 
-  app.get('/api/midi/mappings', (req: Request, res: Response) => {
+  app.get('/api/midi/mappings', (_req: Request, res: Response) => {
     const mappings = midiEngine ? midiEngine.getMappings() : [];
     res.json(mappings);
   });
@@ -208,7 +214,14 @@ export function createHttpServer(
   app.post('/api/midi/mappings', async (req: Request, res: Response) => {
     if (midiEngine && Array.isArray(req.body)) {
       // Validate mapping objects
-      const valid = req.body.every(m => m && typeof m === 'object' && typeof m.id === 'string' && m.action && typeof m.action.type === 'string');
+      const valid = req.body.every(
+        (m) =>
+          m &&
+          typeof m === 'object' &&
+          typeof m.id === 'string' &&
+          m.action &&
+          typeof m.action.type === 'string',
+      );
       if (!valid) {
         res.status(400).json({ error: 'Invalid mappings structure' });
         return;

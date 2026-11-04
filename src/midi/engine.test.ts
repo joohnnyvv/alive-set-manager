@@ -6,17 +6,13 @@ import { DemoMidi as MidiEngine } from '../testing/demo.js';
 import { MidiMapping } from '../types/index.js';
 
 describe('MIDI Engine', () => {
-
   test('device discovery & mapping persistence across restarts', async () => {
     const testStorageFile = path.join(process.env.ASM_DATA_DIR!, 'test-midi-mappings.json');
     try {
       await fs.unlink(testStorageFile);
     } catch {}
 
-    let triggeredAction: any;
-    const engine1 = new MidiEngine((action) => {
-      triggeredAction = action;
-    }, undefined, testStorageFile);
+    const engine1 = new MidiEngine(() => {}, undefined, testStorageFile);
 
     await engine1.init();
 
@@ -42,7 +38,11 @@ describe('MIDI Engine', () => {
     const engine2 = new MidiEngine(() => {}, undefined, testStorageFile);
     await engine2.init();
 
-    assert.equal(engine2.getMappings().length, 1, 'Mappings must be preserved after restarting the app');
+    assert.equal(
+      engine2.getMappings().length,
+      1,
+      'Mappings must be preserved after restarting the app',
+    );
     assert.equal(engine2.getMappings()[0].id, 'm1');
     assert.equal(engine2.getMappings()[0].inputName, 'Test Pedal');
     assert.equal(engine2.getMappings()[0].note, 60);
@@ -88,12 +88,18 @@ describe('MIDI Engine', () => {
 
   test('enforces exact value matching when mapping.value is defined', async () => {
     const testStorageFile = path.join(process.env.ASM_DATA_DIR!, 'test-midi-val-check.json');
-    try { await fs.unlink(testStorageFile); } catch {}
+    try {
+      await fs.unlink(testStorageFile);
+    } catch {}
 
     const triggeredActions: any[] = [];
-    const engine = new MidiEngine(action => {
-      triggeredActions.push(action);
-    }, undefined, testStorageFile);
+    const engine = new MidiEngine(
+      (action) => {
+        triggeredActions.push(action);
+      },
+      undefined,
+      testStorageFile,
+    );
 
     await engine.init();
 
@@ -143,7 +149,9 @@ describe('MIDI Engine', () => {
     registeredCcHandler!({ controller: 65, value: 42, channel: 0 });
     assert.equal(triggeredActions[1].type, 'stop');
     engine.close();
-    try { await fs.unlink(testStorageFile); } catch {}
+    try {
+      await fs.unlink(testStorageFile);
+    } catch {}
   });
 
   test('smart GO button decision logic matrix', () => {
@@ -186,5 +194,4 @@ describe('MIDI Engine', () => {
     }
     assert.equal(nextSongTriggered, true, 'GO button at song end should jump to next song');
   });
-
 });

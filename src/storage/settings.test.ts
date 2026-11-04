@@ -3,27 +3,26 @@ import assert from 'node:assert/strict';
 import { SettingsStorage, validateSettingsPayload } from './settings.js';
 
 describe('Settings Storage & Validation', () => {
-
   test('validates settings payload rejecting unknown keys and invalid values', () => {
     // Unknown keys
     const badKeys = validateSettingsPayload({ maliciousKey: 'rm -rf /', jumpMode: 'quantized' });
     assert.equal(badKeys.valid, false);
-    assert.ok(badKeys.errors.some(e => e.includes('Unknown setting key')));
+    assert.ok(badKeys.errors.some((e) => e.includes('Unknown setting key')));
 
     // Invalid port
     const badPort = validateSettingsPayload({ preferredPort: 999999 });
     assert.equal(badPort.valid, false);
-    assert.ok(badPort.errors.some(e => e.includes('Invalid preferredPort')));
+    assert.ok(badPort.errors.some((e) => e.includes('Invalid preferredPort')));
 
     // Invalid jump mode
     const badMode = validateSettingsPayload({ jumpMode: 'non-existent-mode' });
     assert.equal(badMode.valid, false);
-    assert.ok(badMode.errors.some(e => e.includes('Invalid jumpMode')));
+    assert.ok(badMode.errors.some((e) => e.includes('Invalid jumpMode')));
 
     // Invalid boolean type
     const badBool = validateSettingsPayload({ alwaysStopOnSongEnd: 'yes' });
     assert.equal(badBool.valid, false);
-    assert.ok(badBool.errors.some(e => e.includes('must be a boolean')));
+    assert.ok(badBool.errors.some((e) => e.includes('must be a boolean')));
 
     // Valid payload
     const valid = validateSettingsPayload({
@@ -64,5 +63,4 @@ describe('Settings Storage & Validation', () => {
       assert.equal(settings.getSettings().jumpMode, mode);
     }
   });
-
 });

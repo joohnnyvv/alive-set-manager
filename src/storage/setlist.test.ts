@@ -14,7 +14,6 @@ describe('Setlist Storage', () => {
     await fs.rm(directory, { recursive: true, force: true });
   });
 
-
   test('saves and loads setlist files accurately', async () => {
     const storage = new SetlistStorage(directory);
     const testName = 'Test-Tour-Set-' + Date.now();
@@ -73,5 +72,4 @@ describe('Setlist Storage', () => {
       await fs.unlink(filePath);
     } catch {}
   });
-
 });

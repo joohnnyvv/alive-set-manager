@@ -23,7 +23,9 @@ jobs:
           cache: npm
       - run: sudo apt-get update && sudo apt-get install -y libasound2-dev
       - run: npm ci
-      - run: npm audit --audit-level=moderate
+      - run: npm run audit:dependencies
+      - run: npm run lint
+      - run: npm run format:check
       - run: npm run typecheck
       - run: npm test
       - run: npm run build

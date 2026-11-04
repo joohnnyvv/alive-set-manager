@@ -22,7 +22,9 @@ const App: Component = () => {
     if (!window.desktop) return;
     const dispose = window.desktop.onHelp(() => setView('help'));
     onCleanup(dispose);
-    void window.desktop.info().then(info => { if (!info.setupComplete) showStartupHelp(); });
+    void window.desktop.info().then((info) => {
+      if (!info.setupComplete) showStartupHelp();
+    });
   });
   const navItems = [
     { view: 'setlist' as const, label: 'Setlist' },
@@ -39,8 +41,17 @@ const App: Component = () => {
       <header class="app-header">
         <div class="header-logo">
           <span class="logo-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 12h3l3-9 4 18 3-9h4"/>
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M2 12h3l3-9 4 18 3-9h4" />
             </svg>
           </span>
           <span class="logo-text">Alive Set Manager</span>
@@ -66,8 +77,20 @@ const App: Component = () => {
           ></span>
         </div>
       </header>
-      <div class="live-status-bar" role="status">{connection() !== 'connected' ? 'Connecting to the app…' : !store.liveConnected ? 'Ableton Live not connected — open Help for setup.' : !store.setlist.songs.length ? 'Live connected · Add song locators to populate your setlist.' : 'Live connected'}</div>
-      <main id="app-content" class="app-content" classList={{ 'app-content-setlist': store.currentView === 'setlist' }}>
+      <div class="live-status-bar" role="status">
+        {connection() !== 'connected'
+          ? 'Connecting to the app…'
+          : !store.liveConnected
+            ? 'Ableton Live not connected — open Help for setup.'
+            : !store.setlist.songs.length
+              ? 'Live connected · Add song locators to populate your setlist.'
+              : 'Live connected'}
+      </div>
+      <main
+        id="app-content"
+        class="app-content"
+        classList={{ 'app-content-setlist': store.currentView === 'setlist' }}
+      >
         <Dynamic component={currentComponent()} />
       </main>
     </>

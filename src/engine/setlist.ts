@@ -16,13 +16,13 @@ export class SetlistEngine {
     const sorted = [...cuePoints].sort((a, b) => a.time - b.time);
 
     // 2. Parse each locator
-    const parsedLocators: (ParsedLocator & { id: string })[] = sorted.map(cue => ({
+    const parsedLocators: (ParsedLocator & { id: string })[] = sorted.map((cue) => ({
       ...parseLocator(cue.name, cue.time),
       id: cue.id,
     }));
 
     // Filter out ignored locators
-    const activeLocators = parsedLocators.filter(loc => loc.type !== 'ignored');
+    const activeLocators = parsedLocators.filter((loc) => loc.type !== 'ignored');
 
     const songs: Song[] = [];
 
@@ -38,7 +38,9 @@ export class SetlistEngine {
         if (currentSong) {
           currentSong.endTime = loc.time;
           const effTempo = currentSong.targetTempo || tempo;
-          currentSong.duration = currentSong.duration || Math.max(0, ((loc.time - currentSong.startTime) / effTempo) * 60);
+          currentSong.duration =
+            currentSong.duration ||
+            Math.max(0, ((loc.time - currentSong.startTime) / effTempo) * 60);
           currentSong.sections = currentSections;
           songs.push(currentSong);
         }
@@ -52,7 +54,7 @@ export class SetlistEngine {
         }
 
         // Check if existing song with same id had overrides
-        const existingSong = this.songs.find(s => s.id === loc.id);
+        const existingSong = this.songs.find((s) => s.id === loc.id);
         const durationOverride = existingSong?.durationOverride ?? loc.duration;
 
         // Start new song
@@ -98,7 +100,10 @@ export class SetlistEngine {
           currentSong.endTime = loc.time;
           const effTempo = currentSong.targetTempo || tempo;
           if (currentSong.durationOverride === undefined) {
-            currentSong.duration = Math.max(0, ((loc.time - currentSong.startTime) / effTempo) * 60);
+            currentSong.duration = Math.max(
+              0,
+              ((loc.time - currentSong.startTime) / effTempo) * 60,
+            );
           }
           if (loc.type === 'stop') {
             currentSong.stopBehavior = 'stop';
@@ -125,9 +130,11 @@ export class SetlistEngine {
     }
 
     // Preserve any duplicated songs from existing state whose original song still exists
-    const duplicates = this.songs.filter(s => s.isDuplicate && songs.some(orig => orig.id === (s.originalId || s.id)));
+    const duplicates = this.songs.filter(
+      (s) => s.isDuplicate && songs.some((orig) => orig.id === (s.originalId || s.id)),
+    );
     for (const dup of duplicates) {
-      const orig = songs.find(s => s.id === (dup.originalId || dup.id));
+      const orig = songs.find((s) => s.id === (dup.originalId || dup.id));
       if (orig) {
         dup.startTime = orig.startTime;
         dup.endTime = orig.endTime;
@@ -147,8 +154,8 @@ export class SetlistEngine {
     const allSongs = [...songs, ...duplicates];
     this.songs = allSongs;
 
-    const validIds = new Set(allSongs.map(s => s.id));
-    const updatedOrder = this.order.filter(id => validIds.has(id));
+    const validIds = new Set(allSongs.map((s) => s.id));
+    const updatedOrder = this.order.filter((id) => validIds.has(id));
     for (const s of allSongs) {
       if (!updatedOrder.includes(s.id)) {
         updatedOrder.push(s.id);
@@ -159,9 +166,15 @@ export class SetlistEngine {
     return this.getSetlistState(tempo, 0, false);
   }
 
-  public getSetlistState(tempo: number = 120, currentTime: number = 0, isPlaying: boolean = false): Setlist {
-    const songMap = new Map(this.songs.map(s => [s.id, s]));
-    const orderedSongs = this.order.map(id => songMap.get(id)).filter((s): s is Song => s !== undefined);
+  public getSetlistState(
+    tempo: number = 120,
+    currentTime: number = 0,
+    isPlaying: boolean = false,
+  ): Setlist {
+    const songMap = new Map(this.songs.map((s) => [s.id, s]));
+    const orderedSongs = this.order
+      .map((id) => songMap.get(id))
+      .filter((s): s is Song => s !== undefined);
 
     // Calculate tempo-aware dynamic durations for each song and section
     for (const song of orderedSongs) {
@@ -185,16 +198,18 @@ export class SetlistEngine {
     this.activeSectionId = active.section?.id;
 
     // Total duration of active (non-skipped) songs
-    const activeSongs = orderedSongs.filter(s => !s.isSkipped);
+    const activeSongs = orderedSongs.filter((s) => !s.isSkipped);
     const totalDuration = activeSongs.reduce((sum, s) => sum + s.duration, 0);
 
     // Remaining set time
     let remainingTime = 0;
     if (active.song) {
-      const currentSongIndex = activeSongs.findIndex(s => s.id === active.song?.id);
+      const currentSongIndex = activeSongs.findIndex((s) => s.id === active.song?.id);
       if (currentSongIndex !== -1) {
         const remainingInCurrent = Math.max(0, ((active.song.endTime - currentTime) / tempo) * 60);
-        const remainingInFuture = activeSongs.slice(currentSongIndex + 1).reduce((sum, s) => sum + s.duration, 0);
+        const remainingInFuture = activeSongs
+          .slice(currentSongIndex + 1)
+          .reduce((sum, s) => sum + s.duration, 0);
         remainingTime = remainingInCurrent + remainingInFuture;
       }
     }
@@ -216,7 +231,7 @@ export class SetlistEngine {
 
   public setActiveSongId(songId?: string): void {
     if (songId) {
-      const exists = this.songs.some(s => s.id === songId);
+      const exists = this.songs.some((s) => s.id === songId);
       if (exists) {
         this.activeSongId = songId;
       }
@@ -224,8 +239,10 @@ export class SetlistEngine {
   }
 
   public getActiveSongAndSection(currentTime: number): { song?: Song; section?: Section } {
-    const songMap = new Map(this.songs.map(s => [s.id, s]));
-    const orderedSongs = this.order.map(id => songMap.get(id)).filter((s): s is Song => s !== undefined);
+    const songMap = new Map(this.songs.map((s) => [s.id, s]));
+    const orderedSongs = this.order
+      .map((id) => songMap.get(id))
+      .filter((s): s is Song => s !== undefined);
 
     let activeSong: Song | undefined = undefined;
 
@@ -233,9 +250,15 @@ export class SetlistEngine {
     if (this.activeSongId) {
       const currentActive = songMap.get(this.activeSongId);
       if (currentActive && !currentActive.isSkipped) {
-        if (currentTime >= currentActive.startTime - 0.01 && currentTime < currentActive.endTime - 0.01) {
+        if (
+          currentTime >= currentActive.startTime - 0.01 &&
+          currentTime < currentActive.endTime - 0.01
+        ) {
           activeSong = currentActive;
-        } else if (currentTime >= currentActive.endTime - 0.05 && currentTime <= currentActive.endTime + 0.5) {
+        } else if (
+          currentTime >= currentActive.endTime - 0.05 &&
+          currentTime <= currentActive.endTime + 0.5
+        ) {
           activeSong = currentActive;
         }
       }
@@ -260,10 +283,18 @@ export class SetlistEngine {
 
     // 3. Fallback: Find first non-skipped song in setlist order matching currentTime
     if (!activeSong) {
-      activeSong = orderedSongs.find(s => !s.isSkipped && currentTime >= s.startTime - 0.01 && currentTime < s.endTime - 0.01);
+      activeSong = orderedSongs.find(
+        (s) => !s.isSkipped && currentTime >= s.startTime - 0.01 && currentTime < s.endTime - 0.01,
+      );
       if (!activeSong && orderedSongs.length > 0) {
-        const lastSong = [...orderedSongs].filter(s => !s.isSkipped).sort((a, b) => b.endTime - a.endTime)[0];
-        if (lastSong && currentTime >= lastSong.endTime - 0.05 && currentTime <= lastSong.endTime + 0.5) {
+        const lastSong = [...orderedSongs]
+          .filter((s) => !s.isSkipped)
+          .sort((a, b) => b.endTime - a.endTime)[0];
+        if (
+          lastSong &&
+          currentTime >= lastSong.endTime - 0.05 &&
+          currentTime <= lastSong.endTime + 0.5
+        ) {
           activeSong = lastSong;
         }
       }
@@ -277,10 +308,16 @@ export class SetlistEngine {
     }
 
     // Find section inside activeSong matching currentTime
-    let section = activeSong.sections.find(sec => currentTime >= sec.startTime - 0.01 && currentTime < sec.endTime - 0.01);
+    let section = activeSong.sections.find(
+      (sec) => currentTime >= sec.startTime - 0.01 && currentTime < sec.endTime - 0.01,
+    );
     if (!section && activeSong.sections.length > 0) {
       const lastSection = [...activeSong.sections].sort((a, b) => b.endTime - a.endTime)[0];
-      if (lastSection && currentTime >= lastSection.endTime - 0.05 && currentTime <= lastSection.endTime + 0.5) {
+      if (
+        lastSection &&
+        currentTime >= lastSection.endTime - 0.05 &&
+        currentTime <= lastSection.endTime + 0.5
+      ) {
         section = lastSection;
       }
     }
@@ -289,12 +326,12 @@ export class SetlistEngine {
 
   public reorder(newOrder: string[]): void {
     // Keep only valid IDs and avoid duplicate rows from stale clients/imports.
-    const validIds = new Set(this.songs.map(s => s.id));
-    this.order = [...new Set(newOrder.filter(id => validIds.has(id)))];
+    const validIds = new Set(this.songs.map((s) => s.id));
+    this.order = [...new Set(newOrder.filter((id) => validIds.has(id)))];
   }
 
   public removeSong(songId: string): void {
-    const song = this.songs.find(s => s.id === songId);
+    const song = this.songs.find((s) => s.id === songId);
     if (song) {
       if (song.isDuplicate) {
         this.deleteSong(songId);
@@ -305,15 +342,15 @@ export class SetlistEngine {
   }
 
   public deleteSong(songId: string): void {
-    this.order = this.order.filter(id => id !== songId);
-    const songIndex = this.songs.findIndex(s => s.id === songId);
+    this.order = this.order.filter((id) => id !== songId);
+    const songIndex = this.songs.findIndex((s) => s.id === songId);
     if (songIndex !== -1 && this.songs[songIndex].isDuplicate) {
       this.songs.splice(songIndex, 1);
     }
   }
 
   public duplicateSong(songId: string, savedId?: string): Song | undefined {
-    const originalSong = this.songs.find(s => s.id === songId);
+    const originalSong = this.songs.find((s) => s.id === songId);
     if (!originalSong) return undefined;
 
     const baseId = originalSong.originalId || originalSong.id;
@@ -346,7 +383,7 @@ export class SetlistEngine {
   }
 
   public restoreSong(songId: string): void {
-    const song = this.songs.find(s => s.id === songId);
+    const song = this.songs.find((s) => s.id === songId);
     if (song) {
       song.isSkipped = false;
     }
@@ -363,11 +400,19 @@ export class SetlistEngine {
   }
 
   public getSongById(songId: string): Song | undefined {
-    return this.songs.find(s => s.id === songId);
+    return this.songs.find((s) => s.id === songId);
   }
 
-  public updateSongOverride(songId: string, overrides: { color?: string; stopBehavior?: StopBehavior; duration?: number; isSkipped?: boolean }): void {
-    const song = this.songs.find(s => s.id === songId);
+  public updateSongOverride(
+    songId: string,
+    overrides: {
+      color?: string;
+      stopBehavior?: StopBehavior;
+      duration?: number;
+      isSkipped?: boolean;
+    },
+  ): void {
+    const song = this.songs.find((s) => s.id === songId);
     if (song) {
       if (overrides.isSkipped !== undefined) song.isSkipped = overrides.isSkipped;
       if (overrides.color !== undefined) song.color = overrides.color;
@@ -379,32 +424,46 @@ export class SetlistEngine {
     }
   }
 
-  public getSongOverrides(): Record<string, { color?: string; stopBehavior?: StopBehavior; duration?: number; isSkipped?: boolean }> {
-    return Object.fromEntries(this.songs
-      .map(song => [song.id, {
-        isSkipped: song.isSkipped ?? false,
-        color: song.color,
-        stopBehavior: song.stopBehavior,
-        duration: song.durationOverride,
-      }]));
+  public getSongOverrides(): Record<
+    string,
+    { color?: string; stopBehavior?: StopBehavior; duration?: number; isSkipped?: boolean }
+  > {
+    return Object.fromEntries(
+      this.songs.map((song) => [
+        song.id,
+        {
+          isSkipped: song.isSkipped ?? false,
+          color: song.color,
+          stopBehavior: song.stopBehavior,
+          duration: song.durationOverride,
+        },
+      ]),
+    );
   }
 
-  public applySongOverrides(overrides: Record<string, { color?: string; stopBehavior?: StopBehavior; duration?: number; isSkipped?: boolean }> = {}): void {
+  public applySongOverrides(
+    overrides: Record<
+      string,
+      { color?: string; stopBehavior?: StopBehavior; duration?: number; isSkipped?: boolean }
+    > = {},
+  ): void {
     for (const [songId, values] of Object.entries(overrides)) {
       this.updateSongOverride(songId, values);
     }
   }
 
   public getSavedDuplicates(): Record<string, string> {
-    return Object.fromEntries(this.songs
-      .filter(song => song.isDuplicate && song.originalId)
-      .map(song => [song.id, song.originalId!]));
+    return Object.fromEntries(
+      this.songs
+        .filter((song) => song.isDuplicate && song.originalId)
+        .map((song) => [song.id, song.originalId!]),
+    );
   }
 
   public restoreSavedSetlist(saved: SavedSetlistFile): void {
     // Recreate rows before resolving their IDs in the saved order.
-    this.songs = this.songs.filter(song => !song.isDuplicate);
-    this.order = this.order.filter(id => this.songs.some(song => song.id === id));
+    this.songs = this.songs.filter((song) => !song.isDuplicate);
+    this.order = this.order.filter((id) => this.songs.some((song) => song.id === id));
     this.activeSongId = undefined;
     this.activeSectionId = undefined;
     this.clearQueue();
@@ -416,11 +475,14 @@ export class SetlistEngine {
   }
 
   public importFromText(text: string): void {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const lines = text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
     const newOrder: string[] = [];
 
     for (const line of lines) {
-      const match = this.songs.find(s => s.name.toLowerCase() === line.toLowerCase());
+      const match = this.songs.find((s) => s.name.toLowerCase() === line.toLowerCase());
       if (match) {
         newOrder.push(match.id);
         match.isSkipped = false;
@@ -434,7 +496,7 @@ export class SetlistEngine {
 
   public getSectionById(sectionId: string): { song: Song; section: Section } | undefined {
     for (const song of this.songs) {
-      const section = song.sections.find(sec => sec.id === sectionId);
+      const section = song.sections.find((sec) => sec.id === sectionId);
       if (section) {
         return { song, section };
       }

@@ -6,7 +6,6 @@ import { SettingsStorage } from '../storage/settings.js';
 import { SetlistStorage } from '../storage/setlist.js';
 
 describe('HTTP Server & API Routes', () => {
-
   test('CORS origin allowlist blocks untrusted external domains', () => {
     assert.equal(isOriginAllowed(undefined), true);
     assert.equal(isOriginAllowed('null'), true);
@@ -45,7 +44,7 @@ describe('HTTP Server & API Routes', () => {
         isCountingIn: false,
         remainingTimeInSong: 0,
         remainingTimeInSet: 0,
-      })
+      }),
     );
 
     assert.ok(app);
@@ -54,5 +53,4 @@ describe('HTTP Server & API Routes', () => {
     const loaded = await setlistStorage.load('non-existent-setlist-12345');
     assert.equal(loaded, null);
   });
-
 });

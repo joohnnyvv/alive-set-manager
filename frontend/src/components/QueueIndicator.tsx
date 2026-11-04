@@ -15,8 +15,12 @@ const QueueIndicator: Component<QueueIndicatorProps> = (props) => {
         <strong>{props.queuedName}</strong>
       </div>
       <div class="queue-banner-actions">
-        <button class="btn-queue-cancel" onClick={props.onCancel}>Cancel</button>
-        <button class="btn-queue-now" onClick={props.onJumpNow}>Jump Now</button>
+        <button class="btn-queue-cancel" onClick={props.onCancel}>
+          Cancel
+        </button>
+        <button class="btn-queue-now" onClick={props.onJumpNow}>
+          Jump Now
+        </button>
       </div>
     </div>
   );

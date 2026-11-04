@@ -13,5 +13,5 @@ const root = document.getElementById('app');
 if (root) {
   render(() => <App />, root);
 } else {
-  console.error("No root element found");
+  console.error('No root element found');
 }

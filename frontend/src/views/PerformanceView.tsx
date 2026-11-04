@@ -17,15 +17,16 @@ const PerformanceView: Component = () => {
   });
   onCleanup(() => clearInterval(clockTimer));
 
-  const activeSong = () => store.setlist.songs.find(s => s.id === store.playback.activeSongId);
-  const activeSection = () => activeSong()?.sections.find(sec => sec.id === store.playback.activeSectionId);
-  
-  const activeSongs = () => store.setlist.songs.filter(s => !s.isSkipped);
+  const activeSong = () => store.setlist.songs.find((s) => s.id === store.playback.activeSongId);
+  const activeSection = () =>
+    activeSong()?.sections.find((sec) => sec.id === store.playback.activeSectionId);
+
+  const activeSongs = () => store.setlist.songs.filter((s) => !s.isSkipped);
   const nextSong = () => {
     const active = activeSong();
     const songs = activeSongs();
     if (!active) return songs[0];
-    const currentIndex = songs.findIndex(s => s.id === active.id);
+    const currentIndex = songs.findIndex((s) => s.id === active.id);
     if (currentIndex >= 0 && currentIndex < songs.length - 1) {
       return songs[currentIndex + 1];
     }
@@ -34,11 +35,11 @@ const PerformanceView: Component = () => {
 
   const queueTargetLabel = () => {
     if (store.playback.queuedSectionId && activeSong()) {
-      const sec = activeSong()!.sections.find(s => s.id === store.playback.queuedSectionId);
+      const sec = activeSong()!.sections.find((s) => s.id === store.playback.queuedSectionId);
       if (sec) return sec.name;
     }
     if (store.playback.queuedSongId) {
-      const s = store.setlist.songs.find(s => s.id === store.playback.queuedSongId);
+      const s = store.setlist.songs.find((s) => s.id === store.playback.queuedSongId);
       if (s) return s.name;
     }
     return 'Target';
@@ -52,7 +53,9 @@ const PerformanceView: Component = () => {
       {/* Top bar */}
       <div class="stage-top-bar">
         <div class="stage-clock">{formatClockTime(now(), store.settings.show24HourClock)}</div>
-        <div class="stage-tempo">BPM <strong>{Math.round(store.playback.tempo || 120)}</strong></div>
+        <div class="stage-tempo">
+          BPM <strong>{Math.round(store.playback.tempo || 120)}</strong>
+        </div>
       </div>
 
       {/* Queue Banner */}
@@ -69,7 +72,7 @@ const PerformanceView: Component = () => {
         <div
           class="now-playing-card"
           style={{
-            "border-left": activeSong() ? `4px solid ${getCssColor(activeSong()?.color)}` : 'none'
+            'border-left': activeSong() ? `4px solid ${getCssColor(activeSong()?.color)}` : 'none',
           }}
         >
           <Show
@@ -145,7 +148,11 @@ const PerformanceView: Component = () => {
         progress={store.playback.songProgress || 0}
         elapsedSeconds={elapsedSongSeconds()}
         totalSeconds={activeSongDuration()}
-        label={activeSong() ? `Song Progress (${formatDuration(store.playback.remainingTimeInSong || 0)} left)` : 'Set Idle'}
+        label={
+          activeSong()
+            ? `Song Progress (${formatDuration(store.playback.remainingTimeInSong || 0)} left)`
+            : 'Set Idle'
+        }
       />
 
       {/* Song Sections Strip */}
@@ -161,7 +168,11 @@ const PerformanceView: Component = () => {
                   section={section}
                   isActive={store.playback.activeSectionId === section.id}
                   isQueued={store.playback.queuedSectionId === section.id}
-                  sectionProgress={store.playback.activeSectionId === section.id ? store.playback.sectionProgress : 0}
+                  sectionProgress={
+                    store.playback.activeSectionId === section.id
+                      ? store.playback.sectionProgress
+                      : 0
+                  }
                   onClick={(sec) => dispatch({ type: 'jump-to-section', sectionId: sec.id })}
                 />
               )}

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { getCssColor, colorMap } from './colors.js';
 
 describe('Frontend Color Utilities', () => {
-
   test('getCssColor returns correct hex value for named colors', () => {
     assert.equal(getCssColor('red'), '#ff5252');
     assert.equal(getCssColor('blue'), '#3f51b5');
@@ -20,5 +19,4 @@ describe('Frontend Color Utilities', () => {
     assert.ok(colorMap.blue);
     assert.ok(colorMap.purple);
   });
-
 });

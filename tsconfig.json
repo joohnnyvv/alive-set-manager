@@ -3,11 +3,7 @@
     "target": "ES2023",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": [
-      "ES2023",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -15,11 +11,6 @@
     "outDir": "./dist",
     "rootDir": "./"
   },
-  "include": [
-    "src/**/*",
-    "src/**/*.cts"
-  ],
-  "exclude": [
-    "frontend/**/*"
-  ]
+  "include": ["src/**/*", "src/**/*.cts"],
+  "exclude": ["frontend/**/*"]
 }

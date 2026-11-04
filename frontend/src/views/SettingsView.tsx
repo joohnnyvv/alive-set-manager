@@ -15,19 +15,59 @@ export default function SettingsView() {
   const [wakeLockActive, setWakeLockActive] = createSignal(false);
 
   const themes: { id: AppTheme; name: string; desc: string }[] = [
-    { id: 'midnight', name: 'Midnight Studio', desc: 'Toned dark mode with slate tones & emerald accents.' },
-    { id: 'live-dark', name: 'Ableton Live Dark', desc: 'Warm black and ivory with vermilion accents for the stage.' },
-    { id: 'live-light', name: 'Ableton Live Light', desc: 'Light gray theme for bright daylight or outdoor festival stages.' },
-    { id: 'high-contrast', name: 'High Contrast Stage', desc: 'Pitch black background with neon lime accents & bold borders.' },
-    { id: 'soft-dark', name: 'Soft Dark', desc: 'Low-contrast dark theme with muted tones and zero sharp flare.' },
+    {
+      id: 'midnight',
+      name: 'Midnight Studio',
+      desc: 'Toned dark mode with slate tones & emerald accents.',
+    },
+    {
+      id: 'live-dark',
+      name: 'Ableton Live Dark',
+      desc: 'Warm black and ivory with vermilion accents for the stage.',
+    },
+    {
+      id: 'live-light',
+      name: 'Ableton Live Light',
+      desc: 'Light gray theme for bright daylight or outdoor festival stages.',
+    },
+    {
+      id: 'high-contrast',
+      name: 'High Contrast Stage',
+      desc: 'Pitch black background with neon lime accents & bold borders.',
+    },
+    {
+      id: 'soft-dark',
+      name: 'Soft Dark',
+      desc: 'Low-contrast dark theme with muted tones and zero sharp flare.',
+    },
   ];
 
   const jumpModes: { id: JumpMode; label: string; desc: string }[] = [
-    { id: 'quantized', label: 'Quantized', desc: 'Jump immediately, letting Ableton quantize naturally.' },
-    { id: 'end-of-section', label: 'End of Section', desc: 'Queue target, jump smoothly when current section ends.' },
-    { id: 'end-of-song', label: 'End of Song', desc: 'Queue target, jump smoothly when current song ends.' },
-    { id: 'dynamic', label: 'Dynamic', desc: 'Queue section -> jump at section end; Queue song -> jump at song end.' },
-    { id: 'manual', label: 'Manual', desc: 'Queue target, jump only when manual GO button is pressed or playback stops.' },
+    {
+      id: 'quantized',
+      label: 'Quantized',
+      desc: 'Jump immediately, letting Ableton quantize naturally.',
+    },
+    {
+      id: 'end-of-section',
+      label: 'End of Section',
+      desc: 'Queue target, jump smoothly when current section ends.',
+    },
+    {
+      id: 'end-of-song',
+      label: 'End of Song',
+      desc: 'Queue target, jump smoothly when current song ends.',
+    },
+    {
+      id: 'dynamic',
+      label: 'Dynamic',
+      desc: 'Queue section -> jump at section end; Queue song -> jump at song end.',
+    },
+    {
+      id: 'manual',
+      label: 'Manual',
+      desc: 'Queue target, jump only when manual GO button is pressed or playback stops.',
+    },
   ];
 
   onMount(() => {
@@ -81,19 +121,32 @@ export default function SettingsView() {
 
   function getMidiActionLabel(action: MidiAction): string {
     switch (action.type) {
-      case 'play': return 'Play';
-      case 'pause': return 'Pause';
-      case 'stop': return 'Stop';
-      case 'go': return 'GO Button (Smart)';
-      case 'next-song': return 'Next Song';
-      case 'prev-song': return 'Previous Song';
-      case 'next-section': return 'Next Section';
-      case 'prev-section': return 'Previous Section';
-      case 'toggle-loop': return 'Toggle Loop';
-      case 'cancel-queue': return 'Cancel Queue';
-      case 'jump-to-song': return `Jump to Song #${action.songIndex !== undefined ? action.songIndex + 1 : ''}`;
-      case 'jump-to-section': return `Jump to Section #${action.sectionIndex !== undefined ? action.sectionIndex + 1 : ''}`;
-      default: return 'Custom Action';
+      case 'play':
+        return 'Play';
+      case 'pause':
+        return 'Pause';
+      case 'stop':
+        return 'Stop';
+      case 'go':
+        return 'GO Button (Smart)';
+      case 'next-song':
+        return 'Next Song';
+      case 'prev-song':
+        return 'Previous Song';
+      case 'next-section':
+        return 'Next Section';
+      case 'prev-section':
+        return 'Previous Section';
+      case 'toggle-loop':
+        return 'Toggle Loop';
+      case 'cancel-queue':
+        return 'Cancel Queue';
+      case 'jump-to-song':
+        return `Jump to Song #${action.songIndex !== undefined ? action.songIndex + 1 : ''}`;
+      case 'jump-to-section':
+        return `Jump to Section #${action.sectionIndex !== undefined ? action.sectionIndex + 1 : ''}`;
+      default:
+        return 'Custom Action';
     }
   }
 
@@ -121,14 +174,24 @@ export default function SettingsView() {
         {/* Section 0: App Theme */}
         <div class="settings-card">
           <h3>App Theme & Color Palette</h3>
-          <p class="settings-desc">Select a refined color theme optimized for your environment (studio, dark stage, or outdoor daylight).</p>
+          <p class="settings-desc">
+            Select a refined color theme optimized for your environment (studio, dark stage, or
+            outdoor daylight).
+          </p>
           <div class="theme-grid">
             <For each={themes}>
               {(theme) => (
                 <div
                   class="theme-card"
-                  role="button" tabIndex={0} aria-label={theme.name}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={theme.name}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.currentTarget.click();
+                    }
+                  }}
                   classList={{ 'is-selected': (store.settings.theme || 'midnight') === theme.id }}
                   data-theme-val={theme.id}
                   onClick={() => {
@@ -161,7 +224,10 @@ export default function SettingsView() {
           <div class="radio-group" id="jump-mode-group">
             <For each={jumpModes}>
               {(mode) => (
-                <label class="radio-option" classList={{ 'is-selected': store.settings.jumpMode === mode.id }}>
+                <label
+                  class="radio-option"
+                  classList={{ 'is-selected': store.settings.jumpMode === mode.id }}
+                >
                   <input
                     type="radio"
                     name="jumpMode"
@@ -184,21 +250,36 @@ export default function SettingsView() {
 
         {/* Section 2: MIDI Controller Mapping */}
         <div class="settings-card">
-          <div style={{ display: 'flex', 'justify-content': 'space-between', 'align-items': 'center' }}>
+          <div
+            style={{ display: 'flex', 'justify-content': 'space-between', 'align-items': 'center' }}
+          >
             <div>
               <h3>MIDI Controller Mapping</h3>
               <p class="settings-desc">Map hardware MIDI pedals or controllers using MIDI Learn.</p>
             </div>
-            <button class="btn btn-primary" onClick={() => setShowAddMidiModal(true)}>Add Mapping</button>
+            <button class="btn btn-primary" onClick={() => setShowAddMidiModal(true)}>
+              Add Mapping
+            </button>
           </div>
 
           <div class="midi-devices-info">
             <small style={{ color: 'var(--text-secondary)' }}>
-              Active Inputs: <strong>{store.midi.inputs.length > 0 ? store.midi.inputs.join(', ') : 'None detected'}</strong>
+              Active Inputs:{' '}
+              <strong>
+                {store.midi.inputs.length > 0 ? store.midi.inputs.join(', ') : 'None detected'}
+              </strong>
             </small>
           </div>
 
-          <div class="midi-mappings-list" style={{ display: 'flex', 'flex-direction': 'column', gap: '8px', 'margin-top': '10px' }}>
+          <div
+            class="midi-mappings-list"
+            style={{
+              display: 'flex',
+              'flex-direction': 'column',
+              gap: '8px',
+              'margin-top': '10px',
+            }}
+          >
             <Show
               when={store.midi.mappings && store.midi.mappings.length > 0}
               fallback={
@@ -209,12 +290,19 @@ export default function SettingsView() {
             >
               <For each={store.midi.mappings}>
                 {(mapping) => {
-                  const isLearningThis = () => store.midi.learning && store.midi.learningMappingId === mapping.id;
+                  const isLearningThis = () =>
+                    store.midi.learning && store.midi.learningMappingId === mapping.id;
                   const actionText = () => getMidiActionLabel(mapping.action);
-                  const noteDetail = () => mapping.note !== undefined ? `Note ${mapping.note}` : mapping.cc !== undefined ? `CC #${mapping.cc}` : '';
-                  const midiDetails = () => mapping.messageType
-                    ? `${mapping.messageType.toUpperCase()} | Ch:${mapping.channel}${noteDetail() ? ' | ' + noteDetail() : ''}`
-                    : 'Not learned yet';
+                  const noteDetail = () =>
+                    mapping.note !== undefined
+                      ? `Note ${mapping.note}`
+                      : mapping.cc !== undefined
+                        ? `CC #${mapping.cc}`
+                        : '';
+                  const midiDetails = () =>
+                    mapping.messageType
+                      ? `${mapping.messageType.toUpperCase()} | Ch:${mapping.channel}${noteDetail() ? ' | ' + noteDetail() : ''}`
+                      : 'Not learned yet';
 
                   return (
                     <div
@@ -231,12 +319,21 @@ export default function SettingsView() {
                         <div style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
                           <strong style={{ 'font-size': '0.95rem' }}>{actionText()}</strong>
                           <Show when={isLearningThis()}>
-                            <span class="badge" style={{ background: 'var(--warning)', color: '#000', 'font-weight': '700' }}>
+                            <span
+                              class="badge"
+                              style={{
+                                background: 'var(--warning)',
+                                color: '#000',
+                                'font-weight': '700',
+                              }}
+                            >
                               LEARNING...
                             </span>
                           </Show>
                         </div>
-                        <small style={{ color: 'var(--text-secondary)', 'font-family': 'monospace' }}>
+                        <small
+                          style={{ color: 'var(--text-secondary)', 'font-family': 'monospace' }}
+                        >
                           {midiDetails()}
                         </small>
                       </div>
@@ -245,7 +342,10 @@ export default function SettingsView() {
                           class="btn btn-sm btn-secondary"
                           onClick={() => {
                             dispatch({ type: 'midi.learn', mappingId: mapping.id });
-                            showToast(`Learning action: ${actionText()} — Trigger MIDI input now`, 'info');
+                            showToast(
+                              `Learning action: ${actionText()} — Trigger MIDI input now`,
+                              'info',
+                            );
                           }}
                         >
                           Learn
@@ -302,7 +402,11 @@ export default function SettingsView() {
               id="toggle-24h"
               checked={store.settings.show24HourClock}
               onChange={(e) => {
-                dispatch({ type: 'settings.set', key: 'show24HourClock', value: e.currentTarget.checked });
+                dispatch({
+                  type: 'settings.set',
+                  key: 'show24HourClock',
+                  value: e.currentTarget.checked,
+                });
               }}
             />
           </div>
@@ -319,11 +423,19 @@ export default function SettingsView() {
           </div>
         </div>
 
-        <div class="settings-card"><h3>Setup & support</h3><p>Install AbletonJS, read help, check updates, or export diagnostics.</p><button class="btn" onClick={() => setView('help')}>Open setup & help</button></div>
+        <div class="settings-card">
+          <h3>Setup & support</h3>
+          <p>Install AbletonJS, read help, check updates, or export diagnostics.</p>
+          <button class="btn" onClick={() => setView('help')}>
+            Open setup & help
+          </button>
+        </div>
         {/* Section 4: Mobile Device Connection */}
         <div class="settings-card">
           <h3>Mobile Device Connection</h3>
-          <p class="settings-desc">Connect phones or tablets on stage using your local Wi-Fi network.</p>
+          <p class="settings-desc">
+            Connect phones or tablets on stage using your local Wi-Fi network.
+          </p>
           <div class="setting-row">
             <label for="toggle-lan-mode">Local network access</label>
             <input
@@ -339,22 +451,53 @@ export default function SettingsView() {
             />
           </div>
           <p id="lan-mode-description" class="settings-desc">
-            Allow phones and tablets on the same Wi-Fi network to connect using the QR code.
-            Restart Alive Set Manager after changing this setting to apply it.
+            Allow phones and tablets on the same Wi-Fi network to connect using the QR code. Restart
+            Alive Set Manager after changing this setting to apply it.
           </p>
-          <div style={{ display: 'flex', 'flex-wrap': 'wrap', 'justify-content': 'space-between', 'align-items': 'center', gap: '20px', 'margin-top': '10px' }}>
-            <div class="connection-info" style={{ display: 'flex', 'flex-direction': 'column', gap: '10px', flex: '1', 'min-width': '240px' }}>
+          <div
+            style={{
+              display: 'flex',
+              'flex-wrap': 'wrap',
+              'justify-content': 'space-between',
+              'align-items': 'center',
+              gap: '20px',
+              'margin-top': '10px',
+            }}
+          >
+            <div
+              class="connection-info"
+              style={{
+                display: 'flex',
+                'flex-direction': 'column',
+                gap: '10px',
+                flex: '1',
+                'min-width': '240px',
+              }}
+            >
               <div>
-                WebSocket Status: <span class={`status-badge status-${store.connection}`}>{store.connection.toUpperCase()}</span>
+                WebSocket Status:{' '}
+                <span class={`status-badge status-${store.connection}`}>
+                  {store.connection.toUpperCase()}
+                </span>
               </div>
               <div>
-                Local Address: <strong>{`http://${window.location.host || 'localhost:8080'}`}</strong>
+                Local Address:{' '}
+                <strong>{`http://${window.location.host || 'localhost:8080'}`}</strong>
               </div>
               <div style={{ display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                <span style={{ color: 'var(--text-secondary)', 'font-size': '0.85rem' }}>Mobile Wi-Fi Addresses:</span>
+                <span style={{ color: 'var(--text-secondary)', 'font-size': '0.85rem' }}>
+                  Mobile Wi-Fi Addresses:
+                </span>
                 <For each={ips()}>
                   {(ip) => (
-                    <div style={{ 'font-size': '1.05rem', 'font-weight': '700', color: 'var(--accent)', 'font-family': 'monospace' }}>
+                    <div
+                      style={{
+                        'font-size': '1.05rem',
+                        'font-weight': '700',
+                        color: 'var(--accent)',
+                        'font-family': 'monospace',
+                      }}
+                    >
                       {`http://${ip}:${serverPort()}`}
                     </div>
                   )}
@@ -373,8 +516,25 @@ export default function SettingsView() {
                 'min-width': '180px',
               }}
             >
-              <div ref={qrRef} style={{ width: '160px', height: '160px', display: 'flex', 'align-items': 'center', 'justify-content': 'center' }}></div>
-              <small style={{ color: 'var(--text-secondary)', 'margin-top': '8px', 'font-weight': '600' }}>Scan to Connect</small>
+              <div
+                ref={qrRef}
+                style={{
+                  width: '160px',
+                  height: '160px',
+                  display: 'flex',
+                  'align-items': 'center',
+                  'justify-content': 'center',
+                }}
+              ></div>
+              <small
+                style={{
+                  color: 'var(--text-secondary)',
+                  'margin-top': '8px',
+                  'font-weight': '600',
+                }}
+              >
+                Scan to Connect
+              </small>
             </div>
           </div>
         </div>
@@ -382,13 +542,23 @@ export default function SettingsView() {
 
       {/* Add MIDI Mapping Modal */}
       <Show when={showAddMidiModal()}>
-        <div class="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowAddMidiModal(false); }}>
+        <div
+          class="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowAddMidiModal(false);
+          }}
+        >
           <div class="modal-content">
             <div class="modal-header">
               <h3>Add MIDI Mapping</h3>
-              <button class="btn-icon modal-close" onClick={() => setShowAddMidiModal(false)}>✕</button>
+              <button class="btn-icon modal-close" onClick={() => setShowAddMidiModal(false)}>
+                ✕
+              </button>
             </div>
-            <div class="modal-body" style={{ display: 'flex', 'flex-direction': 'column', gap: '14px' }}>
+            <div
+              class="modal-body"
+              style={{ display: 'flex', 'flex-direction': 'column', gap: '14px' }}
+            >
               <div class="setting-row">
                 <label>Action to Trigger</label>
                 <select
@@ -407,8 +577,17 @@ export default function SettingsView() {
                 </select>
               </div>
 
-              <div style={{ display: 'flex', 'justify-content': 'flex-end', gap: '10px', 'margin-top': '10px' }}>
-                <button class="btn btn-secondary" onClick={() => setShowAddMidiModal(false)}>Cancel</button>
+              <div
+                style={{
+                  display: 'flex',
+                  'justify-content': 'flex-end',
+                  gap: '10px',
+                  'margin-top': '10px',
+                }}
+              >
+                <button class="btn btn-secondary" onClick={() => setShowAddMidiModal(false)}>
+                  Cancel
+                </button>
                 <button
                   class="btn btn-primary"
                   onClick={() => {

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { formatDuration, beatsToSeconds, formatClockTime } from './formatTime.js';
 
 describe('Frontend Time Formatting Utilities', () => {
-
   test('formatDuration formats seconds into mm:ss', () => {
     assert.equal(formatDuration(0), '0:00');
     assert.equal(formatDuration(65), '1:05');
@@ -24,5 +23,4 @@ describe('Frontend Time Formatting Utilities', () => {
     assert.equal(formatClockTime(d, true), '14:05:09');
     assert.equal(formatClockTime(d, false), '2:05:09 PM');
   });
-
 });
